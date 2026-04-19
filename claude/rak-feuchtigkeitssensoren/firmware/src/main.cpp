@@ -118,7 +118,10 @@ void setup() {
     Serial.println("RAK4631 Bodenfeuchte-Sensor startet...");
 
     // RS485 / Modbus initialisieren
-    Serial1.begin(9600, SERIAL_8N1, RS485_RX, RS485_TX);
+    // Adafruit BSP: Serial1-Pins sind im Variant hardcodiert (Feather: P0.24/P0.25)
+    // Für RAK4631 P0.15/P0.16: custom variant nötig oder nrfx_uarte direkt nutzen
+    // Erstmal kompilieren — bei Sensor-Fehler auf Hardware Pins prüfen
+    Serial1.begin(9600);
     modbusNode.begin(1, Serial1);
     Serial.println("Modbus bereit");
 
@@ -177,7 +180,7 @@ void loop() {
     Serial.println();
 
     // Uplink senden (Port 1, unconfirmed)
-    int16_t ret = node.uplink(payload, sizeof(payload), 1);
+    int16_t ret = node.sendReceive(payload, sizeof(payload), 1);
     if (ret == RADIOLIB_ERR_NONE) {
         Serial.println("Uplink gesendet");
     } else {
