@@ -23,70 +23,65 @@ bool displayIsClear;
 static bool isLoraBoard;
 
 void display_start_screen(void) {
-  char ver[15];
+  char ver[17];
   Serial.println("in display.cpp display_start_screen");
   pu8x8->clear();
-  if (isLoraBoard) {
-    // 64x32 Display: 8 Spalten (je 8px), 4 Zeilen
-    pu8x8->setFont(u8x8_font_5x8_f);
-    pu8x8->drawString(0, 0, "Garden");
-    pu8x8->drawString(0, 1, "Node");
-    snprintf(ver, 9, "%.8s", VERSION_STR);
-    pu8x8->drawString(0, 2, ver);
-  } else {
-    // 128x64 Display: 16 Spalten, 8 Zeilen
-    pu8x8->setFont(u8x8_font_7x14_1x2_f);
-    pu8x8->drawString(0, 0, "Garden-Node");
-    pu8x8->drawString(0, 2, "==============");
-    snprintf(ver, 15, "%s", VERSION_STR);
-    pu8x8->drawString(0, 4, ver);
-    pu8x8->drawString(0, 6, "hs");
-  }
+  // 128x64: 16 Spalten, 8 Zeilen
+  pu8x8->setFont(u8x8_font_5x8_f);
+  pu8x8->drawString(0, 0, "Garden-Node");
+  pu8x8->drawString(0, 1, "============");
+  snprintf(ver, sizeof(ver), "%.16s", VERSION_STR);
+  pu8x8->drawString(0, 2, ver);
   displayIsClear = false;
 };
 
 void setup_display(bool loraHardware) {
   Serial.println("in display.cpp setup_display");
   isLoraBoard = loraHardware;
-  
-  if (isLoraBoard) {
-    pu8x8 = &u8x8_lora;
-    //pinMode(PIN_DISPLAY_ON, OUTPUT);
-    //digitalWrite(PIN_DISPLAY_ON, HIGH);
-  } else {
-    pu8x8 = &u8x8;
-  }
-
-  //apu8x8 = &u8x8;
-
+  // Physical display on Heltec Wireless Stick is 128x64.
+  // Always use the 128x64 driver to address the full VRAM.
+  pu8x8 = &u8x8;
   pu8x8->begin();
   delay(500);
   display_start_screen();
 }
 
-// Seite 0: Status — Uhrzeit / Ventil / Impulse
-void displayPage0(bool valve_on, uint8_t hour, uint8_t minute, unsigned int flow) {
-  char buf[10];
-  pu8x8->clear();
+// Vollbild-Update — nutzt alle 8 Zeilen des 128x64 Displays
+// Zeile 7 bleibt für displayStatusLine reserviert
+void displayAll(bool valve_on, uint8_t hour, uint8_t minute, unsigned int flow,
+                uint8_t onH, uint8_t onM, uint8_t offH, uint8_t offM,
+                unsigned int cntrLimit) {
+  char buf[18];
   pu8x8->setFont(u8x8_font_5x8_f);
-  snprintf(buf, sizeof(buf), "%02d:%02d", hour, minute);
-  pu8x8->drawString(0, 0, buf);
-  pu8x8->drawString(0, 1, valve_on ? "V:EIN" : "V:AUS");
-  snprintf(buf, sizeof(buf), "%u Imp", flow);
-  pu8x8->drawString(0, 2, buf);
-}
 
-// Seite 1: Zeitplan — Ein / Aus / Limit
-void displayPage1(uint8_t onH, uint8_t onM, uint8_t offH, uint8_t offM, unsigned int cntrLimit) {
-  char buf[10];
-  pu8x8->clear();
-  pu8x8->setFont(u8x8_font_5x8_f);
-  snprintf(buf, sizeof(buf), "An%02d:%02d", onH, onM);
+  // Zeile 0: Uhrzeit
+  snprintf(buf, sizeof(buf), "Zeit:  %02d:%02d   ", hour, minute);
   pu8x8->drawString(0, 0, buf);
-  snprintf(buf, sizeof(buf), "Ab%02d:%02d", offH, offM);
+
+  // Zeile 1: Ventilzustand
+  snprintf(buf, sizeof(buf), "Ventil: %-7s", valve_on ? "EIN" : "AUS");
   pu8x8->drawString(0, 1, buf);
-  snprintf(buf, sizeof(buf), "L:%u", cntrLimit);
+
+  // Zeile 2: Impulse aktuelle Sitzung
+  snprintf(buf, sizeof(buf), "Imp:  %-10u", flow);
   pu8x8->drawString(0, 2, buf);
+
+  // Zeile 3: Trennlinie
+  pu8x8->drawString(0, 3, "----------------");
+
+  // Zeile 4: Einschaltzeit
+  snprintf(buf, sizeof(buf), "An:    %02d:%02d   ", onH, onM);
+  pu8x8->drawString(0, 4, buf);
+
+  // Zeile 5: Ausschaltzeit
+  snprintf(buf, sizeof(buf), "Ab:    %02d:%02d   ", offH, offM);
+  pu8x8->drawString(0, 5, buf);
+
+  // Zeile 6: Impulslimit
+  snprintf(buf, sizeof(buf), "Max: %-11u", cntrLimit);
+  pu8x8->drawString(0, 6, buf);
+
+  // Zeile 7: Statuszeile (via displayStatusLine)
 }
 
 void clearDisplayLine(int line) {
@@ -100,10 +95,9 @@ void clearDisplayLine(int line) {
 
 void displayStatusLine(String txt) {
   Serial.println("in display.cpp displayStatusLine");
-  int line = isLoraBoard ? 3 : 7;
   pu8x8->setFont(u8x8_font_5x8_f);
-  clearDisplayLine(line);
-  pu8x8->drawString(0, line, txt.c_str());
+  clearDisplayLine(7);
+  pu8x8->drawString(0, 7, txt.c_str());
 }
 
 char *nullFill(int n, int digits) {
