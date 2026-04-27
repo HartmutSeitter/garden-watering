@@ -20,14 +20,15 @@ function decodeUplink(input) {
   }
 
   if (event === 2) {
-    // On/off schedule + counter limit (every 10 min)
+    // On/off schedule + counter limit + max pulses per interval (every 10 min)
     return { data: {
       event: 2,
-      on_time:  pad(b[2]) + ':' + pad(b[3]) + ':' + pad(b[4]),
-      off_time: pad(b[5]) + ':' + pad(b[6]) + ':' + pad(b[7]),
+      on_time:    pad(b[2]) + ':' + pad(b[3]) + ':' + pad(b[4]),
+      off_time:   pad(b[5]) + ':' + pad(b[6]) + ':' + pad(b[7]),
       on_hour: b[2], on_min: b[3], on_sec: b[4],
       off_hour: b[5], off_min: b[6], off_sec: b[7],
-      cntr_value: (b[8]<<8)|b[9]
+      cntr_value: (b[8]<<8)|b[9],
+      max_pulses_per_interval: (b[10]<<8)|b[11]
     }};
   }
 

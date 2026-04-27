@@ -22,7 +22,7 @@ RTC_DS3231 rtc;
 #define FLOW_TX_INTERVAL    15
 
 // Interval for status transmission (OnOff time, DateTime) [sec]
-#define STATUS_TX_INTERVAL  600
+#define STATUS_TX_INTERVAL  600 // test 1 minute - sonst 10 minuten intervall
 
 // Flow meter read interval [sec]
 #define FLOW_METER_READ_INTERVAL 5
@@ -323,7 +323,7 @@ void loop() {
     log(DEBUG, "main: sending status");
     transmit_OnOffTime_hs(onTimeHour, onTimeMinute, onTimeSecond,
                           offTimeHour, offTimeMinute, offTimeSecond,
-                          sensorCntrValue);
+                          sensorCntrValue, maxPulsesPerInterval);
     transmit_DateTime(now.year(), now.month(), now.day(),
                       now.hour(), now.minute(), now.second());
   }

@@ -10,11 +10,11 @@ void setup_transmission(void);
 // Payload: [event=1][rsvd][timeinterval 4 bytes][flowCount 2 bytes] = 8 bytes
 void transmit_data_hs(unsigned long timeinterval, unsigned int flowCount);
 
-// Send on/off schedule and flow counter limit (event type 2)
-// Payload: [event=2][rsvd][onH][onM][onS][offH][offM][offS][cntrValue 2 bytes] = 10 bytes
+// Send on/off schedule, flow counter limit, and max pulses per interval (event type 2)
+// Payload: [event=2][rsvd][onH][onM][onS][offH][offM][offS][cntrValue 2 bytes][maxPI 2 bytes] = 12 bytes
 void transmit_OnOffTime_hs(uint8_t onHour, uint8_t onMin, uint8_t onSec,
                             uint8_t offHour, uint8_t offMin, uint8_t offSec,
-                            unsigned int cntrValue);
+                            unsigned int cntrValue, unsigned int maxPI);
 
 // Send current date/time (event type 3)
 // Payload: [event=3][rsvd][year 2 bytes][month][day][hour][min][sec] = 9 bytes

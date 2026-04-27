@@ -30,19 +30,21 @@ static void send_ttn_data(unsigned long timeinterval, unsigned int flow) {
 
 static void send_ttn_OnOffTime(uint8_t onHour, uint8_t onMin, uint8_t onSec,
                                 uint8_t offHour, uint8_t offMin, uint8_t offSec,
-                                unsigned int cntrValue) {
-  unsigned char ttnData[10];
-  ttnData[0] = 2;  // event: on/off schedule
-  ttnData[1] = 0;  // reserved
-  ttnData[2] = onHour;
-  ttnData[3] = onMin;
-  ttnData[4] = onSec;
-  ttnData[5] = offHour;
-  ttnData[6] = offMin;
-  ttnData[7] = offSec;
-  ttnData[8] = (cntrValue >> 8) & 0xFF;
-  ttnData[9] =  cntrValue       & 0xFF;
-  lorawan_send(1, ttnData, 10, false, NULL, NULL, NULL);
+                                unsigned int cntrValue, unsigned int maxPI) {
+  unsigned char ttnData[12];
+  ttnData[0]  = 2;  // event: on/off schedule
+  ttnData[1]  = 0;  // reserved
+  ttnData[2]  = onHour;
+  ttnData[3]  = onMin;
+  ttnData[4]  = onSec;
+  ttnData[5]  = offHour;
+  ttnData[6]  = offMin;
+  ttnData[7]  = offSec;
+  ttnData[8]  = (cntrValue >> 8) & 0xFF;
+  ttnData[9]  =  cntrValue       & 0xFF;
+  ttnData[10] = (maxPI >> 8) & 0xFF;
+  ttnData[11] =  maxPI       & 0xFF;
+  lorawan_send(1, ttnData, 12, false, NULL, NULL, NULL);
 }
 
 static void send_ttn_DateTime(unsigned int year, uint8_t month, uint8_t day,
@@ -75,11 +77,11 @@ void transmit_data_hs(unsigned long timeinterval, unsigned int flowCount) {
 
 void transmit_OnOffTime_hs(uint8_t onHour, uint8_t onMin, uint8_t onSec,
                             uint8_t offHour, uint8_t offMin, uint8_t offSec,
-                            unsigned int cntrValue) {
+                            unsigned int cntrValue, unsigned int maxPI) {
   if (true) {
     log(DEBUG, "-transmission: sending on/off schedule");
     displayStatusLine("TTN");
-    send_ttn_OnOffTime(onHour, onMin, onSec, offHour, offMin, offSec, cntrValue);
+    send_ttn_OnOffTime(onHour, onMin, onSec, offHour, offMin, offSec, cntrValue, maxPI);
     displayStatusLine(" ");
   }
 }
