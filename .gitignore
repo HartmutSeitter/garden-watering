@@ -1,0 +1,17 @@
+.pio
+.vscode
+.DS_Store
+userdefines.h
+platformio.ini
+*.bin
+flash
+version.h_local
+docs/build
+
+# TTN credentials — never commit real keys
+credentials.h
+
+# Temporary and backup files
+*.zip
+xx.txt
+

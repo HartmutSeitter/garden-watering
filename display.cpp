@@ -1,0 +1,153 @@
+// OLED display related code
+
+#include <Arduino.h>
+#include <U8x8lib.h>
+
+#include "version.h"
+#include "log.h"
+#include "userdefines.h"
+
+#include "display.h"
+
+#define PIN_DISPLAY_ON 25
+
+#define PIN_OLED_RST 16
+#define PIN_OLED_SCL 15
+#define PIN_OLED_SDA 4
+
+U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(PIN_OLED_RST, PIN_OLED_SCL, PIN_OLED_SDA);
+U8X8_SSD1306_64X32_NONAME_HW_I2C u8x8_lora(PIN_OLED_RST, PIN_OLED_SCL, PIN_OLED_SDA);
+U8X8 *pu8x8;
+
+bool displayIsClear;
+static bool isLoraBoard;
+
+void display_start_screen(void) {
+  char ver[15];
+  Serial.println("in display.cpp display_start_screen");
+  pu8x8->clear();
+  if (isLoraBoard) {
+    // 64x32 Display: 8 Spalten, 4 Zeilen
+    pu8x8->setFont(u8x8_font_5x8_f);
+    pu8x8->drawString(0, 0, "Garden-Node");
+    snprintf(ver, 15, "%s", VERSION_STR);
+    pu8x8->drawString(0, 1, ver);
+    pu8x8->drawString(0, 2, "hs");
+  } else {
+    // 128x64 Display: 16 Spalten, 8 Zeilen
+    pu8x8->setFont(u8x8_font_7x14_1x2_f);
+    pu8x8->drawString(0, 0, "Garden-Node");
+    pu8x8->drawString(0, 2, "==============");
+    snprintf(ver, 15, "%s", VERSION_STR);
+    pu8x8->drawString(0, 4, ver);
+    pu8x8->drawString(0, 6, "hs");
+  }
+  displayIsClear = false;
+};
+
+void setup_display(bool loraHardware) {
+  Serial.println("in display.cpp setup_display");
+  isLoraBoard = loraHardware;
+  
+  if (isLoraBoard) {
+    pu8x8 = &u8x8_lora;
+    //pinMode(PIN_DISPLAY_ON, OUTPUT);
+    //digitalWrite(PIN_DISPLAY_ON, HIGH);
+  } else {
+    pu8x8 = &u8x8;
+  }
+
+  //apu8x8 = &u8x8;
+
+  pu8x8->begin();
+  delay(500);
+  display_start_screen();
+}
+
+void clearDisplayLine(int line) {
+  //Serial.println("in display.cpp clearDisplayLine");
+  char blank[17] = "                ";
+  if (isLoraBoard) {
+    blank[9] = '\0';
+  }
+  pu8x8->drawString(0, line, blank);
+}
+
+void displayStatusLine(String txt) {
+  Serial.println("in display.cpp displayStatusLine");
+  int line = isLoraBoard ? 3 : 7;
+  pu8x8->setFont(u8x8_font_5x8_f);
+  clearDisplayLine(line);
+  pu8x8->drawString(0, line, txt.c_str());
+}
+
+char *nullFill(int n, int digits) {
+  //Serial.println("in display.cpp nullFill");
+  static char erg[9];  // max. 8 digits possible!
+  if (digits > 8) {
+    digits = 8;
+  }
+  char format[5];
+  sprintf(format, "%%%dd", digits);
+  sprintf(erg, format, n);
+  return erg;
+}
+
+void DisplayOnOffTime(int ventil, uint8_t ontime_hour, uint8_t ontime_min, uint8_t offtime_hour, uint8_t offtime_min) {
+  //Serial.println("in display.cpp DisplayOnOffTime");
+  pu8x8->clear();
+
+  pu8x8->setFont(u8x8_font_5x8_f);
+  pu8x8->drawString(0, 1, "ventil = ");
+  pu8x8->draw2x2String(10, 1, nullFill(ventil, 1));
+  pu8x8->draw2x2String(0, 3, nullFill(ontime_hour, 2));
+  pu8x8->draw2x2String(5, 3, nullFill(ontime_min, 2));
+  pu8x8->draw2x2String(0, 5, nullFill(offtime_hour, 2));
+  pu8x8->draw2x2String(5, 5, nullFill(offtime_min, 2));
+  displayIsClear = false;
+};
+void DisplayGMC(int TimeSec, int RadNSvph, int CPS, bool use_display, bool connected) {
+  Serial.println("in display.cpp DisplayGMC");
+  if (!use_display) {
+    if (!displayIsClear) {
+      pu8x8->clear();
+      clearDisplayLine(4);
+      clearDisplayLine(5);
+      displayIsClear = true;
+    }
+    return;
+  }
+  Serial.println("in display.cpp pu8x8 clear");
+  pu8x8->clear();
+
+  if (!isLoraBoard) {
+    Serial.println("in display.cpp DisplayGMC - isLoraBoard");
+    char output[80];
+    int TimeMin = TimeSec / 60;         // calculate number of minutes
+    if (TimeMin >= 999) TimeMin = 999;  // limit minutes to max. 999
+
+    // print the upper line including time and measured radation
+    pu8x8->setFont(u8x8_font_7x14_1x2_f);
+
+    if (TimeMin >= 1) {                 // >= 1 minute -> display in minutes
+      sprintf(output, "%3d", TimeMin);
+      pu8x8->print(output);
+    } else {                            // < 1 minute -> display in seconds, inverse
+      sprintf(output, "%3d", TimeSec);
+      pu8x8->inverse();
+      pu8x8->print(output);
+      pu8x8->noInverse();
+    }
+    sprintf(output, "%7d nSv/h", RadNSvph);
+    pu8x8->print(output);
+    pu8x8->setFont(u8x8_font_inb33_3x6_n);
+    pu8x8->drawString(0, 2, nullFill(CPS, 5));
+  } else {
+    pu8x8->setFont(u8x8_font_5x8_f);
+    pu8x8->drawString(0, 2, nullFill(RadNSvph, 8));
+    pu8x8->draw2x2String(0, 3, nullFill(CPS, 4));
+    pu8x8->drawString(0, 5, "     cpm");
+  }
+  displayStatusLine(connected ? " " : "connecting...");
+  displayIsClear = false;
+};

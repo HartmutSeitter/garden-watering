@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gartenbewässerung</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; max-width: 420px; margin: 30px auto; padding: 0 20px; background: #f5f5f5; }
+    h1   { font-size: 22px; color: #333; }
+    button { padding: 14px 20px; margin: 6px 4px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; }
+    #connectBtn  { background: #34C759; color: white; width: 100%; margin-bottom: 16px; }
+    #connectBtn.connected { background: #8e8e93; }
+    #valveOnBtn  { background: #007AFF; color: white; width: calc(50% - 8px); }
+    #valveOffBtn { background: #FF3B30; color: white; width: calc(50% - 8px); }
+    button:disabled { opacity: 0.4; cursor: default; }
+    .card { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .row  { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+    .row:last-child { border-bottom: none; }
+    .label { color: #8e8e93; font-size: 14px; }
+    .value { font-size: 15px; font-weight: 500; }
+    .on  { color: #34C759; }
+    .off { color: #FF3B30; }
+    .warn { color: #FF9500; font-size: 13px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Gartenbewässerung</h1>
+
+  <button id="connectBtn" onclick="toggleConnect()">Mit Node verbinden</button>
+
+  <div class="card">
+    <div class="row">
+      <span class="label">Verbindung</span>
+      <span class="value" id="connStatus">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Ventil</span>
+      <span class="value" id="valveStatus">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Wartungsmodus</span>
+      <span class="value" id="maintStatus">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Durchfluss (Impulse)</span>
+      <span class="value" id="flowStatus">—</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <span class="label">Bewässerung von</span>
+      <span class="value" id="onTime">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Bewässerung bis</span>
+      <span class="value" id="offTime">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Max. Gesamtmenge</span>
+      <span class="value" id="cntrValue">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Max. Rate (pro 5 s)</span>
+      <span class="value" id="maxPI">—</span>
+    </div>
+  </div>
+
+  <button id="valveOnBtn"  onclick="setValve(1)" disabled>Ventil EIN</button>
+  <button id="valveOffBtn" onclick="setValve(0)" disabled>Ventil AUS</button>
+  <p class="warn" id="warnText"></p>
+
+  <script>
+    // ── UUIDs must match ble_control.h ──────────────────────────────────
+    const SVC_UUID        = 'aa000000-0000-0000-0000-000000000001';
+    const VALVE_CTRL_UUID = 'aa000000-0000-0000-0000-000000000002';
+    const STATUS_UUID     = 'aa000000-0000-0000-0000-000000000003';
+    // ────────────────────────────────────────────────────────────────────
+
+    let device = null;
+    let valveCtrlChar = null;
+    let statusChar    = null;
+
+    async function toggleConnect() {
+      if (device && device.gatt.connected) {
+        device.gatt.disconnect();
+        return;
+      }
+      try {
+        setWarn('');
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: 'garden-node' }],
+          optionalServices: [SVC_UUID]
+        });
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+        const server  = await device.gatt.connect();
+        const service = await server.getPrimaryService(SVC_UUID);
+        valveCtrlChar = await service.getCharacteristic(VALVE_CTRL_UUID);
+        statusChar    = await service.getCharacteristic(STATUS_UUID);
+
+        await statusChar.startNotifications();
+        statusChar.addEventListener('characteristicvaluechanged', e => updateStatus(e.target.value));
+
+        const val = await statusChar.readValue();
+        updateStatus(val);
+        onConnected(device.name);
+      } catch(e) {
+        setWarn('Fehler: ' + e.message);
+      }
+    }
+
+    function onConnected(name) {
+      document.getElementById('connStatus').textContent = name;
+      document.getElementById('connStatus').className = 'value on';
+      document.getElementById('connectBtn').textContent = 'Trennen';
+      document.getElementById('connectBtn').className = 'connected';
+      document.getElementById('valveOnBtn').disabled  = false;
+      document.getElementById('valveOffBtn').disabled = false;
+    }
+
+    function onDisconnected() {
+      document.getElementById('connStatus').textContent = 'Getrennt';
+      document.getElementById('connStatus').className = 'value off';
+      document.getElementById('connectBtn').textContent = 'Mit Node verbinden';
+      document.getElementById('connectBtn').className = '';
+      document.getElementById('valveOnBtn').disabled  = true;
+      document.getElementById('valveOffBtn').disabled = true;
+      document.getElementById('valveStatus').textContent  = '—';
+      document.getElementById('maintStatus').textContent  = '—';
+      document.getElementById('flowStatus').textContent   = '—';
+    }
+
+    async function setValve(state) {
+      if (!valveCtrlChar) return;
+      try {
+        await valveCtrlChar.writeValue(new Uint8Array([state]));
+        // Status kommt automatisch via Notify; zur Sicherheit auch direkt lesen
+        const val = await statusChar.readValue();
+        updateStatus(val);
+        if (state === 1)
+          setWarn('Wartungsmodus aktiv — automatische Abschaltung nach max. 20 min.');
+        else
+          setWarn('');
+      } catch(e) {
+        setWarn('Fehler: ' + e.message);
+      }
+    }
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function updateStatus(dataView) {
+      // Bytes 0-3: valve_on, maintenanceMode, flowTotal (uint16 big-endian)
+      // Bytes 4-9: onH, onM, onS, offH, offM, offS
+      // Bytes 10-13: cntrValue (uint16), maxPI (uint16)
+      const valveOn = dataView.getUint8(0);
+      const maintOn = dataView.getUint8(1);
+      const flow    = dataView.getUint16(2, false);
+
+      const vs = document.getElementById('valveStatus');
+      vs.textContent = valveOn ? 'EIN' : 'AUS';
+      vs.className   = 'value ' + (valveOn ? 'on' : 'off');
+
+      const ms = document.getElementById('maintStatus');
+      ms.textContent = maintOn ? 'Aktiv' : 'Inaktiv';
+      ms.className   = 'value ' + (maintOn ? 'on' : '');
+
+      document.getElementById('flowStatus').textContent = flow + ' Impulse';
+
+      if (dataView.byteLength >= 14) {
+        const onH  = dataView.getUint8(4);
+        const onM  = dataView.getUint8(5);
+        const onS  = dataView.getUint8(6);
+        const offH = dataView.getUint8(7);
+        const offM = dataView.getUint8(8);
+        const offS = dataView.getUint8(9);
+        const cntr = dataView.getUint16(10, false);
+        const maxPi= dataView.getUint16(12, false);
+
+        document.getElementById('onTime').textContent   = pad2(onH)  + ':' + pad2(onM)  + ':' + pad2(onS);
+        document.getElementById('offTime').textContent  = pad2(offH) + ':' + pad2(offM) + ':' + pad2(offS);
+        document.getElementById('cntrValue').textContent = cntr + ' Impulse';
+        document.getElementById('maxPI').textContent    = maxPi + ' Impulse';
+      }
+    }
+
+    function setWarn(msg) {
+      document.getElementById('warnText').textContent = msg;
+    }
+  </script>
+</body>
+</html>
