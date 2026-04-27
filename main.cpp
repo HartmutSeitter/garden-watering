@@ -294,6 +294,9 @@ void loop() {
       rec_buffer_len = 0;
     }
 
+    // Update OLED display
+    displayUpdate(valve_on, now.hour(), now.minute(), sensorTotalCntr);
+
     // Push current state to BLE client
     ble_update_status(valve_on, sensorTotalCntr,
                       onTimeHour, onTimeMinute, onTimeSecond,

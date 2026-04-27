@@ -27,12 +27,12 @@ void display_start_screen(void) {
   Serial.println("in display.cpp display_start_screen");
   pu8x8->clear();
   if (isLoraBoard) {
-    // 64x32 Display: 8 Spalten, 4 Zeilen
+    // 64x32 Display: 8 Spalten (je 8px), 4 Zeilen
     pu8x8->setFont(u8x8_font_5x8_f);
-    pu8x8->drawString(0, 0, "Garden-Node");
-    snprintf(ver, 15, "%s", VERSION_STR);
-    pu8x8->drawString(0, 1, ver);
-    pu8x8->drawString(0, 2, "hs");
+    pu8x8->drawString(0, 0, "Garden");
+    pu8x8->drawString(0, 1, "Node");
+    snprintf(ver, 9, "%.8s", VERSION_STR);
+    pu8x8->drawString(0, 2, ver);
   } else {
     // 128x64 Display: 16 Spalten, 8 Zeilen
     pu8x8->setFont(u8x8_font_7x14_1x2_f);
@@ -62,6 +62,25 @@ void setup_display(bool loraHardware) {
   pu8x8->begin();
   delay(500);
   display_start_screen();
+}
+
+void displayUpdate(bool valve_on, uint8_t hour, uint8_t minute, unsigned int flow) {
+  char buf[10];
+  pu8x8->setFont(u8x8_font_5x8_f);
+
+  // Row 0: aktuelle Uhrzeit
+  snprintf(buf, sizeof(buf), "%02d:%02d   ", hour, minute);
+  pu8x8->drawString(0, 0, buf);
+
+  // Row 1: Ventilzustand
+  snprintf(buf, sizeof(buf), "%-8s", valve_on ? "V:EIN" : "V:AUS");
+  pu8x8->drawString(0, 1, buf);
+
+  // Row 2: Impulse gesamt (aktuelle Sitzung)
+  snprintf(buf, sizeof(buf), "%-8u", flow);
+  pu8x8->drawString(0, 2, buf);
+
+  // Row 3: bleibt Statuszeile (displayStatusLine)
 }
 
 void clearDisplayLine(int line) {
