@@ -64,22 +64,29 @@ void setup_display(bool loraHardware) {
   display_start_screen();
 }
 
-void displayUpdate(bool valve_on, uint8_t hour, uint8_t minute, unsigned int flow) {
+// Seite 0: Status — Uhrzeit / Ventil / Impulse
+void displayPage0(bool valve_on, uint8_t hour, uint8_t minute, unsigned int flow) {
   char buf[10];
   pu8x8->setFont(u8x8_font_5x8_f);
-
-  // Row 0: aktuelle Uhrzeit
   snprintf(buf, sizeof(buf), "%02d:%02d   ", hour, minute);
   pu8x8->drawString(0, 0, buf);
-
-  // Row 1: Ventilzustand
   snprintf(buf, sizeof(buf), "%-8s", valve_on ? "V:EIN" : "V:AUS");
   pu8x8->drawString(0, 1, buf);
-
-  // Row 2: Impulse gesamt (aktuelle Sitzung)
   snprintf(buf, sizeof(buf), "%-8u", flow);
   pu8x8->drawString(0, 2, buf);
+  // Row 3: bleibt Statuszeile (displayStatusLine)
+}
 
+// Seite 1: Zeitplan — Ein / Aus / Limit
+void displayPage1(uint8_t onH, uint8_t onM, uint8_t offH, uint8_t offM, unsigned int cntrLimit) {
+  char buf[10];
+  pu8x8->setFont(u8x8_font_5x8_f);
+  snprintf(buf, sizeof(buf), "An%02d:%02d ", onH, onM);
+  pu8x8->drawString(0, 0, buf);
+  snprintf(buf, sizeof(buf), "Ab%02d:%02d ", offH, offM);
+  pu8x8->drawString(0, 1, buf);
+  snprintf(buf, sizeof(buf), "L:%5u  ", cntrLimit);
+  pu8x8->drawString(0, 2, buf);
   // Row 3: bleibt Statuszeile (displayStatusLine)
 }
 
