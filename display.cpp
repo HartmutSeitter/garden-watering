@@ -46,42 +46,36 @@ void setup_display(bool loraHardware) {
   display_start_screen();
 }
 
-// Vollbild-Update — nutzt alle 8 Zeilen des 128x64 Displays
-// Zeile 7 bleibt für displayStatusLine reserviert
-void displayAll(bool valve_on, uint8_t hour, uint8_t minute, unsigned int flow,
-                uint8_t onH, uint8_t onM, uint8_t offH, uint8_t offM,
-                unsigned int cntrLimit) {
-  char buf[18];
-  pu8x8->setFont(u8x8_font_5x8_f);
+// Hilfsfunktion: Zeile mit 16 Leerzeichen löschen (für 1x2-Font beide Tile-Rows)
+static void clearLine2x(int tileRow) {
+  pu8x8->drawString(0, tileRow, "                ");
+}
 
-  // Zeile 0: Uhrzeit
-  snprintf(buf, sizeof(buf), "Zeit:  %02d:%02d   ", hour, minute);
+// Seite 0: Status (Uhrzeit / Ventil / Impulse)
+// Jedes Zeichen belegt 2 Tile-Rows → 4 sichtbare Zeilen bei 128x64
+void displayPage0(bool valve_on, uint8_t hour, uint8_t minute, unsigned int flow) {
+  char buf[17];
+  pu8x8->setFont(u8x8_font_7x14_1x2_f);
+  snprintf(buf, sizeof(buf), "Zeit: %02d:%02d    ", hour, minute);
   pu8x8->drawString(0, 0, buf);
-
-  // Zeile 1: Ventilzustand
-  snprintf(buf, sizeof(buf), "Ventil: %-7s", valve_on ? "EIN" : "AUS");
-  pu8x8->drawString(0, 1, buf);
-
-  // Zeile 2: Impulse aktuelle Sitzung
-  snprintf(buf, sizeof(buf), "Imp:  %-10u", flow);
+  snprintf(buf, sizeof(buf), "%-16s", valve_on ? "Ventil: EIN" : "Ventil: AUS");
   pu8x8->drawString(0, 2, buf);
-
-  // Zeile 3: Trennlinie
-  pu8x8->drawString(0, 3, "----------------");
-
-  // Zeile 4: Einschaltzeit
-  snprintf(buf, sizeof(buf), "An:    %02d:%02d   ", onH, onM);
+  snprintf(buf, sizeof(buf), "Imp:%-12u", flow);
   pu8x8->drawString(0, 4, buf);
+  // Tile-Row 6-7: Statuszeile (via displayStatusLine)
+}
 
-  // Zeile 5: Ausschaltzeit
-  snprintf(buf, sizeof(buf), "Ab:    %02d:%02d   ", offH, offM);
-  pu8x8->drawString(0, 5, buf);
-
-  // Zeile 6: Impulslimit
+// Seite 1: Zeitplan (An / Ab / Max)
+void displayPage1(uint8_t onH, uint8_t onM, uint8_t offH, uint8_t offM, unsigned int cntrLimit) {
+  char buf[17];
+  pu8x8->setFont(u8x8_font_7x14_1x2_f);
+  snprintf(buf, sizeof(buf), "An:  %02d:%02d     ", onH, onM);
+  pu8x8->drawString(0, 0, buf);
+  snprintf(buf, sizeof(buf), "Ab:  %02d:%02d     ", offH, offM);
+  pu8x8->drawString(0, 2, buf);
   snprintf(buf, sizeof(buf), "Max: %-11u", cntrLimit);
-  pu8x8->drawString(0, 6, buf);
-
-  // Zeile 7: Statuszeile (via displayStatusLine)
+  pu8x8->drawString(0, 4, buf);
+  // Tile-Row 6-7: Statuszeile (via displayStatusLine)
 }
 
 void clearDisplayLine(int line) {
@@ -95,9 +89,9 @@ void clearDisplayLine(int line) {
 
 void displayStatusLine(String txt) {
   Serial.println("in display.cpp displayStatusLine");
-  pu8x8->setFont(u8x8_font_5x8_f);
-  clearDisplayLine(7);
-  pu8x8->drawString(0, 7, txt.c_str());
+  pu8x8->setFont(u8x8_font_7x14_1x2_f);
+  clearLine2x(6);
+  pu8x8->drawString(0, 6, txt.c_str());
 }
 
 char *nullFill(int n, int digits) {

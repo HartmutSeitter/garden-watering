@@ -294,9 +294,14 @@ void loop() {
       rec_buffer_len = 0;
     }
 
-    // OLED Vollbild-Update
-    displayAll(valve_on, now.hour(), now.minute(), sensorTotalCntr,
-               onTimeHour, onTimeMinute, offTimeHour, offTimeMinute, sensorCntrValue);
+    // Rollierendes Display — wechselt mit jedem 5s-Tick
+    static uint8_t display_page = 0;
+    if (display_page == 0) {
+      displayPage0(valve_on, now.hour(), now.minute(), sensorTotalCntr);
+    } else {
+      displayPage1(onTimeHour, onTimeMinute, offTimeHour, offTimeMinute, sensorCntrValue);
+    }
+    display_page = (display_page + 1) % 2;
 
     // Push current state to BLE client
     ble_update_status(valve_on, sensorTotalCntr,
