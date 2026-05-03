@@ -60,7 +60,7 @@ void displayPage0(bool valve_on, uint8_t hour, uint8_t minute, unsigned int flow
   pu8x8->drawString(0, 0, buf);
   snprintf(buf, sizeof(buf), "%-16s", valve_on ? "Ventil: EIN" : "Ventil: AUS");
   pu8x8->drawString(0, 2, buf);
-  snprintf(buf, sizeof(buf), "Imp:%-12u", flow);
+  snprintf(buf, sizeof(buf), "Vol:%5.2f L     ", flow / (float)PULSES_PER_LITER);
   pu8x8->drawString(0, 4, buf);
   // Tile-Row 6-7: Statuszeile (via displayStatusLine)
 }
@@ -73,7 +73,7 @@ void displayPage1(uint8_t onH, uint8_t onM, uint8_t offH, uint8_t offM, unsigned
   pu8x8->drawString(0, 0, buf);
   snprintf(buf, sizeof(buf), "Ab:  %02d:%02d     ", offH, offM);
   pu8x8->drawString(0, 2, buf);
-  snprintf(buf, sizeof(buf), "Max: %-11u", cntrLimit);
+  snprintf(buf, sizeof(buf), "Max:%5.2f L     ", cntrLimit / 100.0f);
   pu8x8->drawString(0, 4, buf);
   // Tile-Row 6-7: Statuszeile (via displayStatusLine)
 }

@@ -6,9 +6,9 @@
 
 void setup_transmission(void);
 
-// Send flow counter data (event type 1)
-// Payload: [event=1][rsvd][timeinterval 4 bytes][flowCount 2 bytes] = 8 bytes
-void transmit_data_hs(unsigned long timeinterval, unsigned int flowCount);
+// Send flow volume data (event type 1)
+// Payload: [event=1][rsvd][timeinterval 4 bytes][flowCl 2 bytes] = 8 bytes  (flowCl in centilitres)
+void transmit_data_hs(unsigned long timeinterval, unsigned int flowCl);
 
 // Send on/off schedule, flow counter limit, and max pulses per interval (event type 2)
 // Payload: [event=2][rsvd][onH][onM][onS][offH][offM][offS][cntrValue 2 bytes][maxPI 2 bytes] = 12 bytes
@@ -30,7 +30,7 @@ void transmit_alarm(unsigned int pulses);
 void transmit_watering_start(void);
 
 // Send watering session end (event type 7) — normal close (counter or window end)
-// Payload: [event=7][rsvd][totalFlow 2 bytes][totalTime 4 bytes] = 8 bytes
-void transmit_watering_end(unsigned int totalFlow, unsigned long totalTime);
+// Payload: [event=7][rsvd][totalFlowCl 2 bytes][totalTime 4 bytes] = 8 bytes  (totalFlowCl in centilitres)
+void transmit_watering_end(unsigned int totalFlowCl, unsigned long totalTime);
 
 #endif // _TRANSMISSION_H_

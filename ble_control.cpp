@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 #include "ble_control.h"
+#include "flowsensor.h"
 #include "log.h"
 
 bool maintenanceMode = false;
@@ -17,11 +18,12 @@ class ValveControlCallbacks : public NimBLECharacteristicCallbacks {
       if (cmd == 0x01) {
         maintenanceMode = true;
         maintenanceStartMs = millis();
-        digitalWrite(valve, LOW);   // open valve immediately
+        digitalWrite(valve, HIGH);  // open valve immediately
         log(DEBUG, "BLE: maintenance mode ON — valve opened immediately");
       } else {
         maintenanceMode = false;
-        digitalWrite(valve, HIGH);  // close valve immediately
+        digitalWrite(valve, LOW);   // close valve immediately
+        flowsensor_disable();
         log(DEBUG, "BLE: maintenance mode OFF — valve closed immediately");
       }
     }

@@ -15,7 +15,7 @@ void setup_transmission(void) {
 // Internal LoRa send helpers (static — not exported)
 // ---------------------------------------------------------------------------
 
-static void send_ttn_data(unsigned long timeinterval, unsigned int flow) {
+static void send_ttn_data(unsigned long timeinterval, unsigned int flowCl) {
   unsigned char ttnData[8];
   ttnData[0] = 1;  // event: flow data
   ttnData[1] = 0;  // reserved
@@ -23,8 +23,8 @@ static void send_ttn_data(unsigned long timeinterval, unsigned int flow) {
   ttnData[3] = (timeinterval >> 16) & 0xFF;
   ttnData[4] = (timeinterval >> 8)  & 0xFF;
   ttnData[5] =  timeinterval        & 0xFF;
-  ttnData[6] = (flow >> 8) & 0xFF;
-  ttnData[7] =  flow       & 0xFF;
+  ttnData[6] = (flowCl >> 8) & 0xFF;  // flow volume [centilitres]
+  ttnData[7] =  flowCl       & 0xFF;
   lorawan_send(1, ttnData, 8, false, NULL, NULL, NULL);
 }
 
@@ -66,11 +66,11 @@ static void send_ttn_DateTime(unsigned int year, uint8_t month, uint8_t day,
 // Public API
 // ---------------------------------------------------------------------------
 
-void transmit_data_hs(unsigned long timeinterval, unsigned int flowCount) {
+void transmit_data_hs(unsigned long timeinterval, unsigned int flowCl) {
   if (true) {
-    log(DEBUG, "-transmission: sending flow data (timeinterval=%lu, flow=%u)", timeinterval, flowCount);
+    log(DEBUG, "-transmission: sending flow data (timeinterval=%lu, flow=%u cL)", timeinterval, flowCl);
     displayStatusLine("TTN");
-    send_ttn_data(timeinterval, flowCount);
+    send_ttn_data(timeinterval, flowCl);
     displayStatusLine(" ");
   }
 }
@@ -118,17 +118,17 @@ void transmit_watering_start(void) {
   displayStatusLine(" ");
 }
 
-void transmit_watering_end(unsigned int totalFlow, unsigned long totalTime) {
+void transmit_watering_end(unsigned int totalFlowCl, unsigned long totalTime) {
   unsigned char ttnData[8];
   ttnData[0] = 7;  // event: watering end
   ttnData[1] = 0;  // reserved
-  ttnData[2] = (totalFlow >> 8) & 0xFF;
-  ttnData[3] =  totalFlow       & 0xFF;
+  ttnData[2] = (totalFlowCl >> 8) & 0xFF;  // total volume [centilitres]
+  ttnData[3] =  totalFlowCl       & 0xFF;
   ttnData[4] = (totalTime >> 24) & 0xFF;
   ttnData[5] = (totalTime >> 16) & 0xFF;
   ttnData[6] = (totalTime >>  8) & 0xFF;
   ttnData[7] =  totalTime        & 0xFF;
-  log(DEBUG, "-transmission: sending watering end (flow=%u, time=%lu ms)", totalFlow, totalTime);
+  log(DEBUG, "-transmission: sending watering end (flow=%u cL = %.2f L, time=%lu ms)", totalFlowCl, totalFlowCl / 100.0f, totalTime);
   displayStatusLine("TTN");
   lorawan_send(1, ttnData, 8, false, NULL, NULL, NULL);
   displayStatusLine(" ");

@@ -14,9 +14,9 @@ extern unsigned long maintenanceStartMs;
 void init_ble(const char *deviceName);
 
 // Call to push current state to connected BLE client
-// Payload (14 bytes): [valve_on][maintMode][flowHi][flowLo]
+// Payload (14 bytes): [valve_on][maintMode][flowHi][flowLo]      flow in centilitres
 //                     [onH][onM][onS][offH][offM][offS]
-//                     [cntrHi][cntrLo][maxPIHi][maxPILo]
+//                     [cntrHi][cntrLo][maxPIHi][maxPILo]         cntr in centilitres, maxPI in pulses/interval
 void ble_update_status(bool valve_on, unsigned int flowTotal,
                        uint8_t onH, uint8_t onM, uint8_t onS,
                        uint8_t offH, uint8_t offM, uint8_t offS,

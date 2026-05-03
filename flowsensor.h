@@ -3,5 +3,7 @@
 
 void setup_flowsensor(void);
 unsigned long read_flowsensor(void);
+void flowsensor_enable(void);   // attach interrupt (call when valve opens)
+void flowsensor_disable(void);  // detach interrupt (call when valve closes)
 
 #endif

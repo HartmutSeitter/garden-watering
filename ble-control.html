@@ -42,7 +42,7 @@
       <span class="value" id="maintStatus">—</span>
     </div>
     <div class="row">
-      <span class="label">Durchfluss (Impulse)</span>
+      <span class="label">Durchfluss</span>
       <span class="value" id="flowStatus">—</span>
     </div>
   </div>
@@ -164,7 +164,7 @@
       ms.textContent = maintOn ? 'Aktiv' : 'Inaktiv';
       ms.className   = 'value ' + (maintOn ? 'on' : '');
 
-      document.getElementById('flowStatus').textContent = flow + ' Impulse';
+      document.getElementById('flowStatus').textContent = (flow / 100).toFixed(2) + ' L';
 
       if (dataView.byteLength >= 14) {
         const onH  = dataView.getUint8(4);
@@ -178,7 +178,7 @@
 
         document.getElementById('onTime').textContent   = pad2(onH)  + ':' + pad2(onM)  + ':' + pad2(onS);
         document.getElementById('offTime').textContent  = pad2(offH) + ':' + pad2(offM) + ':' + pad2(offS);
-        document.getElementById('cntrValue').textContent = cntr + ' Impulse';
+        document.getElementById('cntrValue').textContent = (cntr / 100).toFixed(2) + ' L';
         document.getElementById('maxPI').textContent    = maxPi + ' Impulse';
       }
     }

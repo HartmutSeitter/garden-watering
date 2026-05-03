@@ -47,8 +47,8 @@ unsigned long sessionStartMs  = 0;  // millis() when valve last opened
 #define DEFAULT_OFF_HOUR          20
 #define DEFAULT_OFF_MINUTE         5
 #define DEFAULT_OFF_SECOND         0
-#define DEFAULT_CNTR_VALUE       500   // max flow pulses per watering window
-#define DEFAULT_MAX_PULSES_PER_INTERVAL 50  // alarm if pulses in one read interval exceed this
+#define DEFAULT_CNTR_VALUE       300   // max flow per watering window [centilitres] = 3 litres
+#define DEFAULT_MAX_PULSES_PER_INTERVAL 50  // alarm if pulses in one read interval exceed this (kept in pulses)
 
 unsigned int sensorCntrValue       = DEFAULT_CNTR_VALUE;
 unsigned int maxPulsesPerInterval  = DEFAULT_MAX_PULSES_PER_INTERVAL;
@@ -129,7 +129,7 @@ void setup() {
   }
 
   pinMode(valve, OUTPUT);
-  digitalWrite(valve, HIGH);  // HIGH = off
+  digitalWrite(valve, LOW);   // LOW = off
 
   setup_flowsensor();
 
@@ -151,21 +151,25 @@ void loop() {
     flowmeterread_timestamp = millis();
 
     unsigned int pulses = read_flowsensor();
-    sensorTotalCntr += pulses;
-    sensorDeltaCntr += pulses;
+    if (valve_on) {
+      sensorTotalCntr += pulses;
+      sensorDeltaCntr += pulses;
+    }
 
-    // Show current pulse rate on display for threshold calibration
+    // Show current pulse rate on display and serial for threshold calibration
     if (valve_on) {
       char buf[10];
       snprintf(buf, sizeof(buf), "PI:%u", pulses);
       displayStatusLine(buf);
+      log(DEBUG, "main: flow pulses=%u (session total=%.2f L)", pulses, sensorTotalCntr / (float)PULSES_PER_LITER);
     }
 
     // Flow rate anomaly detection — only when valve is open and alarm not already active
     if (valve_on && !flowAlarm && pulses > maxPulsesPerInterval) {
       flowAlarm = true;
-      digitalWrite(valve, HIGH);  // close valve immediately
+      digitalWrite(valve, LOW);   // close valve immediately
       valve_on  = false;
+      flowsensor_disable();
       log(DEBUG, "main: flow alarm! pulses=%u > maxPI=%u — valve closed", pulses, maxPulsesPerInterval);
       transmit_alarm(pulses);
     }
@@ -184,11 +188,12 @@ void loop() {
       // BLE maintenance mode: valve on until maxOnTimeSeconds elapsed
       if (millis() - maintenanceStartMs >= (maxOnTimeSeconds * 1000UL)) {
         maintenanceMode = false;
-        digitalWrite(valve, HIGH);
+        digitalWrite(valve, LOW);
         valve_on = false;
+        flowsensor_disable();
         log(DEBUG, "main: maintenance auto-shutoff after %u sec", maxOnTimeSeconds);
       } else {
-        digitalWrite(valve, LOW);
+        digitalWrite(valve, HIGH);
         valve_on = true;
       }
     } else {
@@ -206,20 +211,21 @@ void loop() {
       int tsEnd   = (endTime   - actual).totalseconds();
 
       if ((tsStart < 0) && (tsEnd > 0)) {
-        if (!flowAlarm && sensorTotalCntr < sensorCntrValue) {
-          digitalWrite(valve, LOW);
+        if (!flowAlarm && sensorTotalCntr < CL_TO_PULSES(sensorCntrValue)) {
+          digitalWrite(valve, HIGH);
           valve_on = true;
         } else {
-          digitalWrite(valve, HIGH);
+          digitalWrite(valve, LOW);
           valve_on = false;
         }
       } else {
         // outside watering window — send end message before reset, then clear
         if (was_on && !flowAlarm) {
-          transmit_watering_end(sensorTotalCntr, millis() - sessionStartMs);
+          transmit_watering_end(PULSES_TO_CL(sensorTotalCntr), millis() - sessionStartMs);
         }
-        digitalWrite(valve, HIGH);
+        digitalWrite(valve, LOW);
         valve_on        = false;
+        flowsensor_disable();
         sensorTotalCntr = 0;
         timeinterval    = 0;
         flowAlarm       = false;
@@ -229,6 +235,7 @@ void loop() {
     // Detect valve-open transition → send start message
     if (!was_on && valve_on) {
       sessionStartMs = millis();
+      flowsensor_enable();
       transmit_watering_start();
     }
     // Detect valve-close transition inside window (counter reached) → send end message
@@ -240,7 +247,7 @@ void loop() {
       int tsStart2 = (startTime - actual).totalseconds();
       int tsEnd2   = (endTime   - actual).totalseconds();
       if ((tsStart2 < 0) && (tsEnd2 > 0)) {
-        transmit_watering_end(sensorTotalCntr, millis() - sessionStartMs);
+        transmit_watering_end(PULSES_TO_CL(sensorTotalCntr), millis() - sessionStartMs);
       }
     }
 
@@ -273,13 +280,13 @@ void loop() {
           }
         }
       }
-      // Event 4: set flow counter limit
+      // Event 4: set flow volume limit [centilitres]
       if (rec_buffer_len >= 3 && rec_buffer[0] == 4) {
         unsigned int newCntr = ((uint8_t)rec_buffer[1] << 8) | (uint8_t)rec_buffer[2];
         if (newCntr > 0) {
           sensorCntrValue = newCntr;
           save_schedule();
-          log(DEBUG, "main: new sensorCntrValue = %u", sensorCntrValue);
+          log(DEBUG, "main: new volume limit = %u cL (%.2f L)", sensorCntrValue, sensorCntrValue / 100.0f);
         }
       }
       // Event 6: set max pulses per read interval (flow alarm threshold)
@@ -304,7 +311,7 @@ void loop() {
     display_page = (display_page + 1) % 2;
 
     // Push current state to BLE client
-    ble_update_status(valve_on, sensorTotalCntr,
+    ble_update_status(valve_on, PULSES_TO_CL(sensorTotalCntr),
                       onTimeHour, onTimeMinute, onTimeSecond,
                       offTimeHour, offTimeMinute, offTimeSecond,
                       sensorCntrValue, maxPulsesPerInterval);
@@ -318,7 +325,7 @@ void loop() {
 
     if (sensorDeltaCntr > 0) {
       log(DEBUG, "main: water flowing, sending flow data (delta=%u)", sensorDeltaCntr);
-      transmit_data_hs(timeinterval, sensorDeltaCntr);
+      transmit_data_hs(timeinterval, PULSES_TO_CL(sensorDeltaCntr));
       sensorDeltaCntr = 0;
       timeinterval    = 0;
     }
