@@ -50,12 +50,14 @@ void flowsensor_enable(void) {
 }
 
 void flowsensor_disable(void) {
-  interruptEnabled = false;
-  detachInterrupt(flowSensorInterruptPin);
+  if (interruptEnabled) {
+    interruptEnabled = false;
+    detachInterrupt(flowSensorInterruptPin);
+    log(DEBUG, "-flowsensor.cpp: interrupt detached");
+  }
   portENTER_CRITICAL(&flowMux);
   flowSensorPulseCount = 0;
   portEXIT_CRITICAL(&flowMux);
-  log(DEBUG, "-flowsensor.cpp: interrupt detached");
 }
 
 //*************************************************************************************
