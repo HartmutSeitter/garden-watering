@@ -2,20 +2,16 @@
 #include "log.h"
 #include "flowsensor.h"
 
-const byte flowSensorInterruptPin = 32;  // interrupt GPIO 32 for flow sensor (GPIO 36 is battery-ADC on Heltec, unsuitable)
-
-// The hall-effect flow sensor outputs approximately 4.5 pulses per second per litre/minute of flow.
-float calibrationFactor = 4.5;
+const byte flowSensorInterruptPin = 32;
 
 static portMUX_TYPE           flowMux              = portMUX_INITIALIZER_UNLOCKED;
 static volatile unsigned int  flowSensorPulseCount = 0;
 static volatile unsigned long lastPulseUs          = 0;
-static bool                   interruptEnabled     = false;
 
 #define DEBOUNCE_US 5000UL  // ignore edges closer than 5 ms
 
 //********************************************************************
-// Interrupt Service Routine to count pulses from flow sensor
+// ISR — counts pulses with debounce
 //********************************************************************
 void IRAM_ATTR pulseCounter()
 {
@@ -28,41 +24,43 @@ void IRAM_ATTR pulseCounter()
   }
 }
 
-//*************************************************************************************
-// Initialize the flow sensor
-//*************************************************************************************
+//********************************************************************
+// setup — interrupt is attached once here and never detached
+//********************************************************************
 void setup_flowsensor(void) {
+  portENTER_CRITICAL(&flowMux);
   flowSensorPulseCount = 0;
-  log(DEBUG, "-flowsensor.cpp: flow sensor pin configured, interrupt initially detached");
+  portEXIT_CRITICAL(&flowMux);
+  lastPulseUs = 0;
   pinMode(flowSensorInterruptPin, INPUT_PULLUP);
-  // interrupt is NOT attached here — call flowsensor_enable() when valve opens
-}
-
-void flowsensor_enable(void) {
-  lastPulseUs      = 0;
-  interruptEnabled = true;
   attachInterrupt(flowSensorInterruptPin, pulseCounter, FALLING);
-  // Reset counter AFTER attach to discard any spurious interrupt triggered by attaching
+  log(DEBUG, "-flowsensor.cpp: interrupt attached permanently on GPIO %d", flowSensorInterruptPin);
+}
+
+//********************************************************************
+// flowsensor_enable — called when valve opens: resets counter
+//********************************************************************
+void flowsensor_enable(void) {
+  lastPulseUs = 0;
   portENTER_CRITICAL(&flowMux);
   flowSensorPulseCount = 0;
   portEXIT_CRITICAL(&flowMux);
-  log(DEBUG, "-flowsensor.cpp: interrupt attached");
+  log(DEBUG, "-flowsensor.cpp: counter reset for new session");
 }
 
+//********************************************************************
+// flowsensor_disable — called when valve closes: resets counter
+// (interrupt stays attached — no risk of missing enable call)
+//********************************************************************
 void flowsensor_disable(void) {
-  if (interruptEnabled) {
-    interruptEnabled = false;
-    detachInterrupt(flowSensorInterruptPin);
-    log(DEBUG, "-flowsensor.cpp: interrupt detached");
-  }
   portENTER_CRITICAL(&flowMux);
   flowSensorPulseCount = 0;
   portEXIT_CRITICAL(&flowMux);
 }
 
-//*************************************************************************************
-// Read and reset the flow sensor pulse counter (atomic, no detach/reattach)
-//*************************************************************************************
+//********************************************************************
+// read — atomic read + reset of pulse counter
+//********************************************************************
 unsigned long read_flowsensor(void) {
   portENTER_CRITICAL(&flowMux);
   unsigned int pulses = flowSensorPulseCount;
