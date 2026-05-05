@@ -302,6 +302,27 @@ void loop() {
           log(DEBUG, "main: new volume limit = %u cL (%.2f L)", sensorCntrValue, sensorCntrValue / 100.0f);
         }
       }
+      // Event 3: set RTC date/time
+      // [3][yearH][yearL][month][day][hour][min][sec]
+      if (rec_buffer_len >= 8 && rec_buffer[0] == 3) {
+        uint16_t newYear  = ((uint8_t)rec_buffer[1] << 8) | (uint8_t)rec_buffer[2];
+        uint8_t  newMonth = rec_buffer[3];
+        uint8_t  newDay   = rec_buffer[4];
+        uint8_t  newHour  = rec_buffer[5];
+        uint8_t  newMin   = rec_buffer[6];
+        uint8_t  newSec   = rec_buffer[7];
+        bool valid = (newYear >= 2024 && newYear <= 2099) &&
+                     (newMonth >= 1 && newMonth <= 12) &&
+                     (newDay   >= 1 && newDay   <= 31) &&
+                     (newHour  <= 23) && (newMin <= 59) && (newSec <= 59);
+        if (valid) {
+          rtc.adjust(DateTime(newYear, newMonth, newDay, newHour, newMin, newSec));
+          log(DEBUG, "main: RTC set to %04d-%02d-%02d %02d:%02d:%02d",
+              newYear, newMonth, newDay, newHour, newMin, newSec);
+        } else {
+          log(DEBUG, "main: RTC set rejected (invalid values)");
+        }
+      }
       // Event 6: set max pulses per read interval (flow alarm threshold)
       if (rec_buffer_len >= 3 && rec_buffer[0] == 6) {
         unsigned int newMaxPI = ((uint8_t)rec_buffer[1] << 8) | (uint8_t)rec_buffer[2];

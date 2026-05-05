@@ -156,6 +156,16 @@ function encodeDownlink(input) {
     };
   }
 
+  if (d.event === 3) {
+    // Set RTC date/time
+    // { "event": 3, "year": 2026, "month": 5, "day": 5, "hour": 20, "min": 0, "sec": 0 }
+    var yr = d.year;
+    return {
+      bytes: [3, (yr >> 8) & 0xFF, yr & 0xFF, d.month, d.day, d.hour, d.min, d.sec],
+      fPort: 1, warnings: [], errors: []
+    };
+  }
+
   if (d.event === 4) {
     // Set max total pulses (counter limit)
     var c = d.cntr_value;
