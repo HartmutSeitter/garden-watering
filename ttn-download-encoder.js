@@ -145,6 +145,49 @@ try {
 // Set max pulses per 5s interval (leak alarm threshold):
 //   { "event": 6, "max_pulses": 80 }
 
+// ─── DOWNLINK DECODER ────────────────────────────────────────────────────────
+// TTN calls this to display sent downlinks in the console log
+function decodeDownlink(input) {
+  var b = input.bytes;
+  var event = b[0];
+
+  if (event === 1) {
+    return { data: {
+      event: 1,
+      on_time:  pad(b[1]) + ':' + pad(b[2]) + ':' + pad(b[3]),
+      off_time: pad(b[4]) + ':' + pad(b[5]) + ':' + pad(b[6])
+    }};
+  }
+
+  if (event === 3) {
+    return { data: {
+      event: 3,
+      year:  (b[1] << 8) | b[2],
+      month: b[3], day: b[4],
+      hour:  b[5], min: b[6], sec: b[7]
+    }};
+  }
+
+  if (event === 4) {
+    var cntr = (b[1] << 8) | b[2];
+    return { data: {
+      event:            4,
+      cntr_value_cl:    cntr,
+      cntr_value_liter: parseFloat((cntr / 100).toFixed(2))
+    }};
+  }
+
+  if (event === 6) {
+    return { data: {
+      event:      6,
+      max_pulses: (b[1] << 8) | b[2]
+    }};
+  }
+
+  return { errors: ['unknown event: ' + event] };
+}
+
+// ─── DOWNLINK ENCODER ────────────────────────────────────────────────────────
 function encodeDownlink(input) {
   var d = input.data;
 
