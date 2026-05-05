@@ -23,10 +23,8 @@ function decodeUplink(input) {
     };
     if (rawPulses !== null) {
       out.raw_pulses = rawPulses;
-      // helper: pulses per litre = raw_pulses / flow_liter (only meaningful when flow_liter > 0)
-      if (flowCl > 0) {
-        out.pulses_per_liter_est = parseFloat((rawPulses / (flowCl / 100)).toFixed(1));
-      }
+      // Calibration hint: PULSES_PER_LITER = raw_pulses / actual_volume_liter
+      // (measure a known volume, divide raw_pulses by that volume)
     }
     return { data: out };
   }
