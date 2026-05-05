@@ -294,13 +294,12 @@ void loop() {
         }
       }
       // Event 4: set flow volume limit [centilitres]
+      // cntr = 0 → no watering (valve stays closed all window)
       if (rec_buffer_len >= 3 && rec_buffer[0] == 4) {
         unsigned int newCntr = ((uint8_t)rec_buffer[1] << 8) | (uint8_t)rec_buffer[2];
-        if (newCntr > 0) {
-          sensorCntrValue = newCntr;
-          save_schedule();
-          log(DEBUG, "main: new volume limit = %u cL (%.2f L)", sensorCntrValue, sensorCntrValue / 100.0f);
-        }
+        sensorCntrValue = newCntr;
+        save_schedule();
+        log(DEBUG, "main: new volume limit = %u cL (%.2f L)", sensorCntrValue, sensorCntrValue / 100.0f);
       }
       // Event 3: set RTC date/time
       // [3][yearH][yearL][month][day][hour][min][sec]
