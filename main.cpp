@@ -53,7 +53,8 @@ unsigned long sessionStartMs     = 0;  // millis() when valve last opened
 
 unsigned int sensorCntrValue       = DEFAULT_CNTR_VALUE;
 unsigned int maxPulsesPerInterval  = DEFAULT_MAX_PULSES_PER_INTERVAL;
-bool         flowAlarm             = false;
+bool         flowAlarm             = false;  // set on excessive flow rate — latched until window ends
+bool         counterLimitReached   = false;  // set when volume limit hit — latched until window ends
 
 uint8_t onTimeHour    = DEFAULT_ON_HOUR;
 uint8_t onTimeMinute  = DEFAULT_ON_MINUTE;
@@ -187,13 +188,14 @@ void loop() {
     bool was_on = valve_on;  // capture state before any changes
 
     if (maintenanceMode) {
-      // BLE maintenance mode: valve on until maxOnTimeSeconds elapsed
-      if (millis() - maintenanceStartMs >= (maxOnTimeSeconds * 1000UL)) {
+      // BLE maintenance mode: valve on until timeout, flow alarm, or volume limit
+      if (millis() - maintenanceStartMs >= (maxOnTimeSeconds * 1000UL)
+          || flowAlarm || counterLimitReached) {
         maintenanceMode = false;
         digitalWrite(valve, LOW);
         valve_on = false;
         flowsensor_disable();
-        log(DEBUG, "main: maintenance auto-shutoff after %u sec", maxOnTimeSeconds);
+        log(DEBUG, "main: maintenance ended (alarm/limit/timeout)");
       } else {
         digitalWrite(valve, HIGH);
         valve_on = true;
@@ -213,10 +215,18 @@ void loop() {
       int tsEnd   = (endTime   - actual).totalseconds();
 
       if ((tsStart < 0) && (tsEnd > 0)) {
-        if (!flowAlarm && sensorTotalCntr < CL_TO_PULSES(sensorCntrValue)) {
+        if (!flowAlarm && !counterLimitReached &&
+            sensorTotalCntr < CL_TO_PULSES(sensorCntrValue)) {
           digitalWrite(valve, HIGH);
           valve_on = true;
         } else {
+          // Latch counter limit so valve stays off even if sensorTotalCntr resets
+          if (!counterLimitReached && sensorTotalCntr >= CL_TO_PULSES(sensorCntrValue)) {
+            counterLimitReached = true;
+            flowsensor_disable();
+            log(DEBUG, "main: volume limit reached (%u cL) — locked off for this window",
+                PULSES_TO_CL(sensorTotalCntr));
+          }
           digitalWrite(valve, LOW);
           valve_on = false;
         }
@@ -226,11 +236,12 @@ void loop() {
           transmit_watering_end(PULSES_TO_CL(sensorTotalCntr), millis() - sessionStartMs);
         }
         digitalWrite(valve, LOW);
-        valve_on        = false;
+        valve_on             = false;
         flowsensor_disable();
-        sensorTotalCntr = 0;
-        timeinterval    = 0;
-        flowAlarm       = false;
+        sensorTotalCntr      = 0;
+        timeinterval         = 0;
+        flowAlarm            = false;
+        counterLimitReached  = false;
       }
     }
 
