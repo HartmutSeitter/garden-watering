@@ -7,8 +7,10 @@
 void setup_transmission(void);
 
 // Send flow volume data (event type 1)
-// Payload: [event=1][rsvd][timeinterval 4 bytes][flowCl 2 bytes] = 8 bytes  (flowCl in centilitres)
-void transmit_data_hs(unsigned long timeinterval, unsigned int flowCl);
+// Payload: [event=1][rsvd][timeinterval 4 bytes][flowCl 2 bytes][rawPulses 2 bytes] = 10 bytes
+//   flowCl    — volume in centilitres (pulses converted via PULSES_PER_LITER)
+//   rawPulses — raw pulse count in the TX interval (for sensor calibration)
+void transmit_data_hs(unsigned long timeinterval, unsigned int flowCl, unsigned int rawPulses);
 
 // Send on/off schedule, flow counter limit, and max pulses per interval (event type 2)
 // Payload: [event=2][rsvd][onH][onM][onS][offH][offM][offS][cntrValue 2 bytes][maxPI 2 bytes] = 12 bytes

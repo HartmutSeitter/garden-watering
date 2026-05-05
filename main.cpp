@@ -36,9 +36,10 @@ static unsigned long flow_tx_timestamp           = millis();
 static unsigned long status_tx_timestamp         = millis();
 unsigned long timeinterval = 0;
 
-unsigned int  sensorTotalCntr = 0;  // cumulative for valve shutoff within watering window
-unsigned int  sensorDeltaCntr = 0;  // pulses since last LoRa transmission
-unsigned long sessionStartMs  = 0;  // millis() when valve last opened
+unsigned int  sensorTotalCntr    = 0;  // cumulative for valve shutoff within watering window
+unsigned int  sensorDeltaCntr    = 0;  // pulses since last LoRa transmission
+unsigned int  lastIntervalPulses = 0;  // raw pulses in the most recent 5 s read (BLE debug)
+unsigned long sessionStartMs     = 0;  // millis() when valve last opened
 
 // Compile-time defaults — active on first boot or if NVS has never been written
 #define DEFAULT_ON_HOUR           20
@@ -151,6 +152,7 @@ void loop() {
     flowmeterread_timestamp = millis();
 
     unsigned int pulses = read_flowsensor();
+    lastIntervalPulses = pulses;  // save for BLE debug (always, not just when valve is on)
     if (valve_on) {
       sensorTotalCntr += pulses;
       sensorDeltaCntr += pulses;
@@ -314,7 +316,8 @@ void loop() {
     ble_update_status(valve_on, PULSES_TO_CL(sensorTotalCntr),
                       onTimeHour, onTimeMinute, onTimeSecond,
                       offTimeHour, offTimeMinute, offTimeSecond,
-                      sensorCntrValue, maxPulsesPerInterval);
+                      sensorCntrValue, maxPulsesPerInterval,
+                      lastIntervalPulses);
   }
 
   // -----------------------------------------------------------------------
@@ -324,8 +327,9 @@ void loop() {
     flow_tx_timestamp = millis();
 
     if (sensorDeltaCntr > 0) {
-      log(DEBUG, "main: water flowing, sending flow data (delta=%u)", sensorDeltaCntr);
-      transmit_data_hs(timeinterval, PULSES_TO_CL(sensorDeltaCntr));
+      log(DEBUG, "main: water flowing, sending flow data (delta=%u cL, raw=%u pulses)",
+          PULSES_TO_CL(sensorDeltaCntr), sensorDeltaCntr);
+      transmit_data_hs(timeinterval, PULSES_TO_CL(sensorDeltaCntr), sensorDeltaCntr);
       sensorDeltaCntr = 0;
       timeinterval    = 0;
     }

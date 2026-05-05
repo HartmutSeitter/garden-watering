@@ -11,15 +11,24 @@ function decodeUplink(input) {
 
   if (event === 1) {
     // Flow data (every 15s while water flows)
-    // [1][0][timeMs 4B][flowCl 2B]
-    var timeMs = ((b[2]<<24)|(b[3]<<16)|(b[4]<<8)|b[5]) >>> 0;
-    var flowCl = (b[6]<<8)|b[7];
-    return { data: {
-      event: 1,
+    // [1][0][timeMs 4B][flowCl 2B][rawPulses 2B]
+    var timeMs    = ((b[2]<<24)|(b[3]<<16)|(b[4]<<8)|b[5]) >>> 0;
+    var flowCl    = (b[6]<<8)|b[7];
+    var rawPulses = b.length >= 10 ? (b[8]<<8)|b[9] : null;
+    var out = {
+      event:           1,
       timeinterval_ms: timeMs,
       flow_cl:         flowCl,
       flow_liter:      parseFloat((flowCl / 100).toFixed(2))
-    }};
+    };
+    if (rawPulses !== null) {
+      out.raw_pulses = rawPulses;
+      // helper: pulses per litre = raw_pulses / flow_liter (only meaningful when flow_liter > 0)
+      if (flowCl > 0) {
+        out.pulses_per_liter_est = parseFloat((rawPulses / (flowCl / 100)).toFixed(1));
+      }
+    }
+    return { data: out };
   }
 
   if (event === 2) {

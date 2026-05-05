@@ -70,6 +70,32 @@
   <button id="valveOffBtn" onclick="setValve(0)" disabled>Ventil AUS</button>
   <p class="warn" id="warnText"></p>
 
+  <div class="card">
+    <div style="font-size:13px; font-weight:600; color:#8e8e93; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Debug / Kalibrierung</div>
+    <div class="row">
+      <span class="label">Rohimpulse (letzte 5 s)</span>
+      <span class="value" id="rawPulses">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Impulsrate</span>
+      <span class="value" id="pulseRate">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Durchfluss (berechnet)</span>
+      <span class="value" id="flowEstimate">—</span>
+    </div>
+    <div class="row">
+      <span class="label">PPL-Wert (Impulse/Liter)</span>
+      <span class="value"><input id="pplInput" type="number" value="595" min="1" max="9999"
+        style="width:70px;font-size:15px;border:1px solid #ccc;border-radius:6px;padding:2px 6px;"
+        oninput="recalcDebug()"></span>
+    </div>
+    <div class="row">
+      <span class="label">Letzte Aktualisierung</span>
+      <span class="value" id="lastUpdate">—</span>
+    </div>
+  </div>
+
   <script>
     // ── UUIDs must match ble_control.h ──────────────────────────────────
     const SVC_UUID        = 'aa000000-0000-0000-0000-000000000001';
@@ -148,10 +174,17 @@
 
     function pad2(n) { return String(n).padStart(2, '0'); }
 
+    let _lastRawPulses = 0;  // stored for recalcDebug() on PPL input change
+
     function updateStatus(dataView) {
-      // Bytes 0-3: valve_on, maintenanceMode, flowTotal (uint16 big-endian)
-      // Bytes 4-9: onH, onM, onS, offH, offM, offS
-      // Bytes 10-13: cntrValue (uint16), maxPI (uint16)
+      // Byte layout (16 bytes):
+      // [0]    valve_on
+      // [1]    maintenanceMode
+      // [2-3]  flowTotal uint16 BE (centilitres)
+      // [4-9]  onH onM onS offH offM offS
+      // [10-11] cntrValue uint16 BE (centilitres)
+      // [12-13] maxPI uint16 BE (pulses/interval)
+      // [14-15] rawPulsesLastInterval uint16 BE
       const valveOn = dataView.getUint8(0);
       const maintOn = dataView.getUint8(1);
       const flow    = dataView.getUint16(2, false);
@@ -176,11 +209,30 @@
         const cntr = dataView.getUint16(10, false);
         const maxPi= dataView.getUint16(12, false);
 
-        document.getElementById('onTime').textContent   = pad2(onH)  + ':' + pad2(onM)  + ':' + pad2(onS);
-        document.getElementById('offTime').textContent  = pad2(offH) + ':' + pad2(offM) + ':' + pad2(offS);
+        document.getElementById('onTime').textContent    = pad2(onH)  + ':' + pad2(onM)  + ':' + pad2(onS);
+        document.getElementById('offTime').textContent   = pad2(offH) + ':' + pad2(offM) + ':' + pad2(offS);
         document.getElementById('cntrValue').textContent = (cntr / 100).toFixed(2) + ' L';
-        document.getElementById('maxPI').textContent    = maxPi + ' Impulse';
+        document.getElementById('maxPI').textContent     = maxPi + ' Impulse';
       }
+
+      if (dataView.byteLength >= 16) {
+        _lastRawPulses = dataView.getUint16(14, false);
+        recalcDebug();
+      }
+
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('de-DE');
+    }
+
+    function recalcDebug() {
+      const ppl = parseInt(document.getElementById('pplInput').value, 10) || 595;
+      const raw = _lastRawPulses;
+      // 5 s interval → × 12 = per minute
+      const ratePerMin  = raw * 12;
+      const flowLpm     = ratePerMin / ppl;
+
+      document.getElementById('rawPulses').textContent  = raw + ' Imp';
+      document.getElementById('pulseRate').textContent  = ratePerMin + ' Imp/min';
+      document.getElementById('flowEstimate').textContent = flowLpm.toFixed(2) + ' L/min';
     }
 
     function setWarn(msg) {

@@ -60,10 +60,11 @@ void init_ble(const char *deviceName) {
 void ble_update_status(bool valve_on, unsigned int flowTotal,
                        uint8_t onH, uint8_t onM, uint8_t onS,
                        uint8_t offH, uint8_t offM, uint8_t offS,
-                       unsigned int cntrValue, unsigned int maxPI) {
+                       unsigned int cntrValue, unsigned int maxPI,
+                       unsigned int rawPulsesLastInterval) {
   if (pStatusChar == nullptr) return;
-  uint8_t data[14];
-  data[0]  = valve_on       ? 1 : 0;
+  uint8_t data[16];
+  data[0]  = valve_on        ? 1 : 0;
   data[1]  = maintenanceMode ? 1 : 0;
   data[2]  = (flowTotal >> 8) & 0xFF;
   data[3]  =  flowTotal       & 0xFF;
@@ -77,6 +78,8 @@ void ble_update_status(bool valve_on, unsigned int flowTotal,
   data[11] =  cntrValue       & 0xFF;
   data[12] = (maxPI >> 8) & 0xFF;
   data[13] =  maxPI       & 0xFF;
-  pStatusChar->setValue(data, 14);
+  data[14] = (rawPulsesLastInterval >> 8) & 0xFF;  // raw pulses last 5 s (calibration)
+  data[15] =  rawPulsesLastInterval       & 0xFF;
+  pStatusChar->setValue(data, 16);
   pStatusChar->notify();
 }

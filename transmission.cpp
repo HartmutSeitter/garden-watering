@@ -15,17 +15,19 @@ void setup_transmission(void) {
 // Internal LoRa send helpers (static — not exported)
 // ---------------------------------------------------------------------------
 
-static void send_ttn_data(unsigned long timeinterval, unsigned int flowCl) {
-  unsigned char ttnData[8];
+static void send_ttn_data(unsigned long timeinterval, unsigned int flowCl, unsigned int rawPulses) {
+  unsigned char ttnData[10];
   ttnData[0] = 1;  // event: flow data
   ttnData[1] = 0;  // reserved
   ttnData[2] = (timeinterval >> 24) & 0xFF;
   ttnData[3] = (timeinterval >> 16) & 0xFF;
   ttnData[4] = (timeinterval >> 8)  & 0xFF;
   ttnData[5] =  timeinterval        & 0xFF;
-  ttnData[6] = (flowCl >> 8) & 0xFF;  // flow volume [centilitres]
+  ttnData[6] = (flowCl >> 8) & 0xFF;     // flow volume [centilitres]
   ttnData[7] =  flowCl       & 0xFF;
-  lorawan_send(1, ttnData, 8, false, NULL, NULL, NULL);
+  ttnData[8] = (rawPulses >> 8) & 0xFF;  // raw pulse count (for calibration)
+  ttnData[9] =  rawPulses       & 0xFF;
+  lorawan_send(1, ttnData, 10, false, NULL, NULL, NULL);
 }
 
 static void send_ttn_OnOffTime(uint8_t onHour, uint8_t onMin, uint8_t onSec,
@@ -66,13 +68,12 @@ static void send_ttn_DateTime(unsigned int year, uint8_t month, uint8_t day,
 // Public API
 // ---------------------------------------------------------------------------
 
-void transmit_data_hs(unsigned long timeinterval, unsigned int flowCl) {
-  if (true) {
-    log(DEBUG, "-transmission: sending flow data (timeinterval=%lu, flow=%u cL)", timeinterval, flowCl);
-    displayStatusLine("TTN");
-    send_ttn_data(timeinterval, flowCl);
-    displayStatusLine(" ");
-  }
+void transmit_data_hs(unsigned long timeinterval, unsigned int flowCl, unsigned int rawPulses) {
+  log(DEBUG, "-transmission: sending flow data (timeinterval=%lu, flow=%u cL, raw=%u pulses)",
+      timeinterval, flowCl, rawPulses);
+  displayStatusLine("TTN");
+  send_ttn_data(timeinterval, flowCl, rawPulses);
+  displayStatusLine(" ");
 }
 
 void transmit_OnOffTime_hs(uint8_t onHour, uint8_t onMin, uint8_t onSec,
