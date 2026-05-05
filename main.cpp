@@ -49,7 +49,7 @@ unsigned long sessionStartMs     = 0;  // millis() when valve last opened
 #define DEFAULT_OFF_MINUTE         5
 #define DEFAULT_OFF_SECOND         0
 #define DEFAULT_CNTR_VALUE       300   // max flow per watering window [centilitres] = 3 litres
-#define DEFAULT_MAX_PULSES_PER_INTERVAL 500  // alarm if pulses in one read interval exceed this (kept in pulses)
+#define DEFAULT_MAX_PULSES_PER_INTERVAL 2000  // alarm if pulses in one read interval exceed this (kept in pulses)
 
 unsigned int sensorCntrValue       = DEFAULT_CNTR_VALUE;
 unsigned int maxPulsesPerInterval  = DEFAULT_MAX_PULSES_PER_INTERVAL;
