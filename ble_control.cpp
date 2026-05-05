@@ -7,7 +7,9 @@
 bool maintenanceMode = false;
 unsigned long maintenanceStartMs = 0;
 
-extern byte valve;   // GPIO pin declared in main.cpp
+extern byte valve;              // GPIO pin declared in main.cpp
+extern bool flowAlarm;          // declared in main.cpp
+extern bool counterLimitReached; // declared in main.cpp
 
 static NimBLECharacteristic *pStatusChar = nullptr;
 
@@ -16,10 +18,12 @@ class ValveControlCallbacks : public NimBLECharacteristicCallbacks {
     if (pChar->getValue().size() > 0) {
       uint8_t cmd = pChar->getValue()[0];
       if (cmd == 0x01) {
-        maintenanceMode = true;
-        maintenanceStartMs = millis();
+        flowAlarm           = false;  // clear latched alarms so maintenance can proceed
+        counterLimitReached = false;
+        maintenanceMode     = true;
+        maintenanceStartMs  = millis();
         digitalWrite(valve, HIGH);  // open valve immediately
-        log(DEBUG, "BLE: maintenance mode ON — valve opened immediately");
+        log(DEBUG, "BLE: maintenance mode ON — alarms cleared, valve opened immediately");
       } else {
         maintenanceMode = false;
         digitalWrite(valve, LOW);   // close valve immediately
