@@ -53,8 +53,11 @@ void init_ble(const char *deviceName) {
 
   pService->start();
 
+  // Name-only advertising: 128-bit UUID + name exceed the 31-byte advertising packet limit,
+  // causing NimBLE to truncate the name — Bluefy's namePrefix filter then fails to match.
+  // Service UUID is not needed in the advertising packet: Web Bluetooth finds the device by
+  // namePrefix and accesses the service via optionalServices after connecting.
   NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
   pAdvertising->setName(deviceName);
   pAdvertising->start();
 

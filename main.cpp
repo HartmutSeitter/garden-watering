@@ -137,6 +137,13 @@ void setup() {
 
   init_ble(NODE_NAME);
 
+  // Read RTC once so 'now' is valid for the first status transmission
+  now = rtc.now();
+
+  // Trigger status TX immediately on first loop iteration (join + send schedule + datetime),
+  // so a downlink to set the RTC time can be sent right after the first uplink.
+  status_tx_timestamp = millis() - (STATUS_TX_INTERVAL * 1000UL);
+
   Serial.println("setup completed");
 }
 
@@ -310,6 +317,8 @@ void loop() {
         uint8_t  newHour  = rec_buffer[5];
         uint8_t  newMin   = rec_buffer[6];
         uint8_t  newSec   = rec_buffer[7];
+        log(DEBUG, "main: RTC downlink bytes year=%u month=%u day=%u hour=%u min=%u sec=%u",
+            newYear, newMonth, newDay, newHour, newMin, newSec);
         bool valid = (newYear >= 2024 && newYear <= 2099) &&
                      (newMonth >= 1 && newMonth <= 12) &&
                      (newDay   >= 1 && newDay   <= 31) &&
