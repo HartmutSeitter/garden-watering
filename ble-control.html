@@ -115,7 +115,7 @@
       try {
         setWarn('');
         device = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: 'garden-node' }],
+          filters: [{ namePrefix: 'garden-node' }, { namePrefix: 'Beregnung' }],
           optionalServices: [SVC_UUID]
         });
         device.addEventListener('gattserverdisconnected', onDisconnected);
