@@ -135,8 +135,17 @@
       }
     }
 
+    const FRIENDLY_NAMES = {
+      'garden-node-1':           'Panorama',
+      'garden-node-2':           'Beet Süd-Mitte',
+      'garden-node-3':           'Beregnung Sonnenbergstr',
+      'Beregnung Sonnenbergstr': 'Beregnung Sonnenbergstr',
+      'garden-node-4':           'Sonnenberg-Panorama',
+    };
+
     function onConnected(name) {
-      document.getElementById('connStatus').textContent = name;
+      const display = FRIENDLY_NAMES[name] || name;
+      document.getElementById('connStatus').textContent = display;
       document.getElementById('connStatus').className = 'value on';
       document.getElementById('connectBtn').textContent = 'Trennen';
       document.getElementById('connectBtn').className = 'connected';
