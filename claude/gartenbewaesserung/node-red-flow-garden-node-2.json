@@ -399,7 +399,7 @@
         "type": "function",
         "z": "f1a2b3c4d5e67801",
         "name": "DL: cntrValue [4]",
-        "func": "const cl = msg.payload.cntr_value_cl || 300;\nconst buf = Buffer.alloc(3);\nbuf[0] = 4;\nbuf[1] = (cl >> 8) & 0xFF;\nbuf[2] =  cl       & 0xFF;\nmsg.topic   = \"v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/down/push\";\nmsg.payload = JSON.stringify({ downlinks: [{ f_port: 1, frm_payload: buf.toString(\"base64\"), priority: \"NORMAL\" }] });\nreturn msg;",
+        "func": "const cl = (msg.payload.cntr_value_cl !== undefined) ? msg.payload.cntr_value_cl : 300;\nconst buf = Buffer.alloc(3);\nbuf[0] = 4;\nbuf[1] = (cl >> 8) & 0xFF;\nbuf[2] =  cl       & 0xFF;\nmsg.topic   = \"v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/down/push\";\nmsg.payload = JSON.stringify({ downlinks: [{ f_port: 1, frm_payload: buf.toString(\"base64\"), priority: \"NORMAL\" }] });\nreturn msg;",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -615,7 +615,7 @@
         "type": "function",
         "z": "f1a2b3c4d5e67801",
         "name": "Entscheidung",
-        "func": "// ── Schwellwerte (anpassbar) ───────────────────────────────────────\nvar SOIL_THRESH        = 25;   // % — unter diesem Wert Bewässerung nötig\nvar RAIN_TODAY_THRESH  = 3;    // mm — darüber heute bereits genug Regen\nvar RAIN_FORE_THRESH   = 5;    // mm — darüber in 12h Regen erwartet\n// ──────────────────────────────────────────────────────────────────\n\n// Nächste 12h Niederschlag aus Open-Meteo-Stundenwerten\nvar forecast12h = 0;\ntry {\n    var hourly = msg.payload.hourly;\n    var times  = hourly.time;\n    var precip = hourly.precipitation;\n    var now     = new Date();\n    var curHour = now.getHours();\n    var todayStr = now.toISOString().split('T')[0];\n    var count = 0;\n    for (var i = 0; i < times.length && count < 12; i++) {\n        var parts = times[i].split('T');\n        var d = parts[0];\n        var h = parseInt(parts[1].split(':')[0]);\n        if ((d === todayStr && h >= curHour) || d > todayStr) {\n            forecast12h += precip[i];\n            count++;\n        }\n    }\n    forecast12h = parseFloat(forecast12h.toFixed(1));\n} catch(e) {\n    node.warn('Wetter-Parse-Fehler: ' + e.message);\n}\n\nvar soil      = msg.soilMoisture;\nvar rainToday = msg.rainToday || 0;\nvar cntr = 0;\nvar skipReason = '';\n\nif (soil >= SOIL_THRESH) {\n    skipReason = 'Bodenfeuchte ausreichend (' + soil.toFixed(1) + '%)';\n} else if (rainToday >= RAIN_TODAY_THRESH) {\n    skipReason = 'Regen heute: ' + rainToday.toFixed(1) + ' mm';\n} else if (forecast12h >= RAIN_FORE_THRESH) {\n    skipReason = 'Regen vorhergesagt: ' + forecast12h.toFixed(1) + ' mm';\n} else {\n    if (soil < 15) {\n        cntr = 1000;\n    } else {\n        cntr = Math.round(1000 - 400 * (soil - 15) / (SOIL_THRESH - 15));\n        cntr = Math.max(200, Math.min(600, cntr));\n    }\n}\n\nmsg.cntr        = cntr;\nmsg.forecast12h = forecast12h;\nmsg.decision    = cntr > 0 ? 'BEREGNEN' : 'ÜBERSPRINGEN';\nmsg.skipReason  = skipReason;\n\nnode.warn('Beet Süd-Mitte Entscheidung: ' + msg.decision + ' cntr=' + cntr + ' cL (' + (cntr/100).toFixed(1) + ' L)'\n    + ' soil=' + soil.toFixed(1) + '% regen=' + rainToday.toFixed(1)\n    + 'mm vorhersage=' + forecast12h + 'mm');\n\nreturn [msg, msg];",
+        "func": "// ── Schwellwerte (anpassbar) ───────────────────────────────────────\nvar SOIL_THRESH        = 25;   // % — unter diesem Wert Bewässerung nötig\nvar RAIN_TODAY_THRESH  = 3;    // mm — darüber heute bereits genug Regen\nvar RAIN_FORE_THRESH   = 5;    // mm — darüber in 12h Regen erwartet\n// ──────────────────────────────────────────────────────────────────\n\n// Nächste 12h Niederschlag aus Open-Meteo-Stundenwerten\nvar forecast12h = 0;\ntry {\n    var hourly = msg.payload.hourly;\n    var times  = hourly.time;\n    var precip = hourly.precipitation;\n    var now     = new Date();\n    var curHour = now.getHours();\n    var todayStr = now.toISOString().split('T')[0];\n    var count = 0;\n    for (var i = 0; i < times.length && count < 12; i++) {\n        var parts = times[i].split('T');\n        var d = parts[0];\n        var h = parseInt(parts[1].split(':')[0]);\n        if ((d === todayStr && h >= curHour) || d > todayStr) {\n            forecast12h += precip[i];\n            count++;\n        }\n    }\n    forecast12h = parseFloat(forecast12h.toFixed(1));\n} catch(e) {\n    node.warn('Wetter-Parse-Fehler: ' + e.message);\n}\n\nvar soil      = msg.soilMoisture;\nvar rainToday = msg.rainToday || 0;\nvar cntr = 0;\nvar skipReason = '';\n\nif (soil >= SOIL_THRESH) {\n    skipReason = 'Bodenfeuchte ausreichend (' + soil.toFixed(1) + '%)';\n} else if (rainToday >= RAIN_TODAY_THRESH) {\n    skipReason = 'Regen heute: ' + rainToday.toFixed(1) + ' mm';\n} else if (forecast12h >= RAIN_FORE_THRESH) {\n    skipReason = 'Regen vorhergesagt: ' + forecast12h.toFixed(1) + ' mm';\n} else {\n    if (soil < 15) {\n        cntr = 1000;\n    } else {\n        cntr = Math.round(1000 - 400 * (soil - 15) / (SOIL_THRESH - 15));\n        cntr = Math.max(200, Math.min(600, cntr));\n    }\n}\n\nmsg.cntr        = cntr;\nflow.set('cntr', cntr);  // für 19:30-Retry gespeichert\nmsg.forecast12h = forecast12h;\nmsg.decision    = cntr > 0 ? 'BEREGNEN' : 'ÜBERSPRINGEN';\nmsg.skipReason  = skipReason;\n\nnode.warn('Beet Süd-Mitte Entscheidung: ' + msg.decision + ' cntr=' + cntr + ' cL (' + (cntr/100).toFixed(1) + ' L)'\n    + ' soil=' + soil.toFixed(1) + '% regen=' + rainToday.toFixed(1)\n    + 'mm vorhersage=' + forecast12h + 'mm');\n\nreturn [msg, msg];",
         "outputs": 2,
         "timeout": "",
         "noerr": 0,
@@ -690,5 +690,54 @@
         "x": 1720,
         "y": 560,
         "wires": []
+    },
+    {
+        "id": "f1a2193000000001",
+        "type": "inject",
+        "z": "f1a2b3c4d5e67801",
+        "name": "19:30 Downlink Retry",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "30 19 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 700,
+        "wires": [
+            [
+                "f1a2193000000002"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2193000000002",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Downlink cntrValue Retry",
+        "func": "// 19:30 Retry: cntr-Wert von 18:00 nochmal senden\nvar cntr = flow.get('cntr');\nif (cntr === undefined || cntr === null) {\n    node.warn('19:30 Retry: kein cntr gespeichert — übersprungen');\n    return null;\n}\nvar bytes = [4, (cntr >> 8) & 0xFF, cntr & 0xFF];\nmsg.topic = 'v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/down/push';\nmsg.payload = JSON.stringify({downlinks:[{f_port:1,\n    frm_payload: Buffer.from(bytes).toString('base64'), priority:'NORMAL'}]});\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 700,
+        "wires": [
+            [
+                "f1a2b3c4d5e67821"
+            ]
+        ]
     }
 ]
