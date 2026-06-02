@@ -1,0 +1,694 @@
+[
+    {
+        "id": "f1a2b3c4d5e67801",
+        "type": "tab",
+        "label": "garden-node-2",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "f1a2b3c4d5e67820",
+        "type": "mqtt in",
+        "z": "f1a2b3c4d5e67801",
+        "name": "hs.garden-beet-sued-mitte",
+        "topic": "v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/up",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "1bafccebd3263fc5",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 60,
+        "wires": [
+            [
+                "f1a2b3c4d5e67802"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67802",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "decode payload",
+        "func": "try {\n    var raw = Buffer.from(msg.payload.uplink_message.frm_payload, 'base64');\n    var t = raw[0];\n    msg.eventType = t;\n    msg.devEui = msg.topic.split('/')[3];\n\n    if (t === 1) {\n        msg.flowData = {\n            timeinterval: ((raw[2]<<24)|(raw[3]<<16)|(raw[4]<<8)|raw[5]) >>> 0,\n            flowCl: (raw[6]<<8)|raw[7]\n        };\n    } else if (t === 2) {\n        msg.schedule = {\n            onH:raw[2], onM:raw[3], onS:raw[4],\n            offH:raw[5], offM:raw[6], offS:raw[7],\n            cntrCl:(raw[8]<<8)|raw[9],\n            maxPI:(raw[10]<<8)|raw[11]\n        };\n    } else if (t === 4) {\n        msg.wateringStart = { status: 'watering_started' };\n    } else if (t === 5) {\n        msg.alarmPulses = (raw[2]<<8)|raw[3];\n    } else if (t === 7) {\n        msg.wateringEnd = {\n            totalFlowCl: (raw[2]<<8)|raw[3],\n            totalTimeMs: ((raw[4]<<24)|(raw[5]<<16)|(raw[6]<<8)|raw[7]) >>> 0\n        };\n    }\n    return msg;\n} catch(e) {\n    node.error('decode error: ' + e.message, msg);\n    return null;\n}\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 120,
+        "wires": [
+            [
+                "f1a2b3c4d5e67804",
+                "f1a2b3c4d5e67803"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67803",
+        "type": "debug",
+        "z": "f1a2b3c4d5e67801",
+        "name": "alle Events",
+        "active": false,
+        "tosidebar": true,
+        "complete": "true",
+        "x": 530,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "f1a2b3c4d5e67804",
+        "type": "switch",
+        "z": "f1a2b3c4d5e67801",
+        "name": "route by event",
+        "property": "eventType",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "1",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "2",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "4",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "5",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "7",
+                "vt": "num"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 5,
+        "x": 530,
+        "y": 120,
+        "wires": [
+            [
+                "f1a2b3c4d5e67805"
+            ],
+            [
+                "f1a2b3c4d5e67806"
+            ],
+            [
+                "f1a2b3c4d5e67807"
+            ],
+            [
+                "f1a2b3c4d5e67808"
+            ],
+            [
+                "f1a2b3c4d5e67809"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67805",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Event 1: flow",
+        "func": "msg.payload = {\n    flow_cl:         msg.flowData.flowCl,\n    flow_liter:      parseFloat((msg.flowData.flowCl / 100.0).toFixed(2)),\n    timeinterval_ms: msg.flowData.timeinterval\n};\nmsg.tags = { node: 'garden-node-2' };\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 730,
+        "y": 60,
+        "wires": [
+            [
+                "f1a2b3c4d5e6780c"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67806",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Event 2: schedule",
+        "func": "msg.payload = {\n    on_hour: msg.schedule.onH, on_min: msg.schedule.onM, on_sec: msg.schedule.onS,\n    off_hour: msg.schedule.offH, off_min: msg.schedule.offM, off_sec: msg.schedule.offS,\n    cntr_cl:    msg.schedule.cntrCl,\n    cntr_liter: parseFloat((msg.schedule.cntrCl / 100.0).toFixed(2)),\n    max_pulses_per_interval: msg.schedule.maxPI\n};\nmsg.tags = { node: 'garden-node-2' };\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 120,
+        "wires": [
+            [
+                "f1a2b3c4d5e6780d"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67807",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Event 4: Start",
+        "func": "msg.payload = {chatId:5846653852, type:'message',\n    content:'💧 Bewässerung gestartet\\nZone: Beet Süd-Mitte'};\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 200,
+        "wires": [
+            [
+                "f1a2b3c4d5e6780b"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67808",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Event 5: Alarm",
+        "func": "var lPerMin = (msg.alarmPulses / 2339.0 * 12).toFixed(2);\nmsg.payload = {chatId:5846653852, type:'message',\n    content:'🚨 ALARM: Leckage!\\nZone: Beet Süd-Mitte\\nDurchfluss: '+lPerMin+' L/min\\nVentil geschlossen.'};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 260,
+        "wires": [
+            [
+                "f1a2b3c4d5e6780b"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67809",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Event 7: Ende",
+        "func": "var liter = (msg.wateringEnd.totalFlowCl / 100.0).toFixed(2);\nvar m = Math.round(msg.wateringEnd.totalTimeMs / 60000);\nmsg.payload = {chatId:5846653852, type:'message',\n    content:'✅ Bewässerung beendet\\nZone: Beet Süd-Mitte\\nMenge: '+liter+' Liter\\nDauer: '+m+' min'};\nmsg.influxPayload = [{measurement:'garden_irrigation', tags:{node:'garden-node-2'},\n    fields:{\n        total_cl:    msg.wateringEnd.totalFlowCl,\n        total_liter: parseFloat(liter),\n        duration_ms:  msg.wateringEnd.totalTimeMs,\n        duration_min: parseFloat((msg.wateringEnd.totalTimeMs/60000).toFixed(2))\n    }}];\nreturn [msg, msg];\n",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 340,
+        "wires": [
+            [
+                "f1a2b3c4d5e6780b"
+            ],
+            [
+                "f1a2b3c4d5e6780a"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6780a",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "session→influx",
+        "func": "msg.payload = {\n    total_cl: msg.wateringEnd.totalFlowCl,\n    total_liter: parseFloat((msg.wateringEnd.totalFlowCl / 100.0).toFixed(2)),\n    duration_ms: msg.wateringEnd.totalTimeMs,\n    duration_min: parseFloat((msg.wateringEnd.totalTimeMs / 60000).toFixed(2))\n};\nmsg.tags = { node: 'garden-node-2' };\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1000,
+        "y": 360,
+        "wires": [
+            [
+                "f1a2b3c4d5e6780e"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6780b",
+        "type": "telegram sender",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Telegram senden",
+        "bot": "e23ef07e5ab85d9a",
+        "haserroroutput": false,
+        "outputs": 1,
+        "x": 1570,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6780c",
+        "type": "influxdb out",
+        "z": "f1a2b3c4d5e67801",
+        "influxdb": "b40036b5788454b0",
+        "name": "garden_flow",
+        "measurement": "garden_flow",
+        "precision": "ms",
+        "database": "iot-daten",
+        "org": "hsorg",
+        "bucket": "iot-daten",
+        "x": 1000,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "f1a2b3c4d5e6780d",
+        "type": "influxdb out",
+        "z": "f1a2b3c4d5e67801",
+        "influxdb": "b40036b5788454b0",
+        "name": "garden_schedule",
+        "measurement": "garden_schedule",
+        "precision": "ms",
+        "database": "iot-daten",
+        "org": "hsorg",
+        "bucket": "iot-daten",
+        "x": 1000,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "f1a2b3c4d5e6780e",
+        "type": "influxdb out",
+        "z": "f1a2b3c4d5e67801",
+        "influxdb": "b40036b5788454b0",
+        "name": "garden_irrigation",
+        "measurement": "garden_irrigation",
+        "precision": "ms",
+        "database": "iot-daten",
+        "org": "hsorg",
+        "bucket": "iot-daten",
+        "x": 1230,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "f1a2b3c4d5e6780f",
+        "type": "inject",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Zeitplan setzen",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{   \"on_hour\": 20,   \"on_min\": 0,   \"on_sec\": 0,   \"off_hour\": 20,   \"off_min\": 30,   \"off_sec\": 0 }",
+        "payloadType": "json",
+        "x": 140,
+        "y": 500,
+        "wires": [
+            [
+                "f1a2b3c4d5e67812"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67810",
+        "type": "inject",
+        "z": "f1a2b3c4d5e67801",
+        "name": "cntrValue setzen - 300 = 3l",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{   \"cntr_value_cl\": 300 }",
+        "payloadType": "json",
+        "x": 170,
+        "y": 560,
+        "wires": [
+            [
+                "f1a2b3c4d5e67813"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67811",
+        "type": "inject",
+        "z": "f1a2b3c4d5e67801",
+        "name": "maxPulses setzen pro interval",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{   \"max_pulses\": 3000 }",
+        "payloadType": "json",
+        "x": 180,
+        "y": 620,
+        "wires": [
+            [
+                "f1a2b3c4d5e67814"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67812",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "DL: Zeitplan [1]",
+        "func": "const p = msg.payload;\nconst buf = Buffer.alloc(7);\nbuf[0] = 1;\nbuf[1] = p.on_hour  !== undefined ? p.on_hour  : 20;\nbuf[2] = p.on_min   !== undefined ? p.on_min   : 0;\nbuf[3] = p.on_sec   !== undefined ? p.on_sec   : 0;\nbuf[4] = p.off_hour !== undefined ? p.off_hour : 20;\nbuf[5] = p.off_min  !== undefined ? p.off_min  : 30;\nbuf[6] = p.off_sec  !== undefined ? p.off_sec  : 0;\nmsg.topic   = \"v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/down/push\";\nmsg.payload = JSON.stringify({ downlinks: [{ f_port: 1, frm_payload: buf.toString(\"base64\"), priority: \"NORMAL\" }] });\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 500,
+        "wires": [
+            [
+                "f1a2b3c4d5e67821"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67813",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "DL: cntrValue [4]",
+        "func": "const cl = msg.payload.cntr_value_cl || 300;\nconst buf = Buffer.alloc(3);\nbuf[0] = 4;\nbuf[1] = (cl >> 8) & 0xFF;\nbuf[2] =  cl       & 0xFF;\nmsg.topic   = \"v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/down/push\";\nmsg.payload = JSON.stringify({ downlinks: [{ f_port: 1, frm_payload: buf.toString(\"base64\"), priority: \"NORMAL\" }] });\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 560,
+        "wires": [
+            [
+                "f1a2b3c4d5e67821"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67814",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "DL: maxPulses [6]",
+        "func": "const mp = msg.payload.max_pulses || 3000;\nconst buf = Buffer.alloc(3);\nbuf[0] = 6;\nbuf[1] = (mp >> 8) & 0xFF;\nbuf[2] =  mp       & 0xFF;\nmsg.topic   = \"v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/down/push\";\nmsg.payload = JSON.stringify({ downlinks: [{ f_port: 1, frm_payload: buf.toString(\"base64\"), priority: \"NORMAL\" }] });\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 620,
+        "wires": [
+            [
+                "f1a2b3c4d5e67821"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6781e",
+        "type": "inject",
+        "z": "f1a2b3c4d5e67801",
+        "name": "RTC Zeit setzen",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"event\":3,\"year\":2026,\"month\":5,\"day\":18,\"hour\":12,\"min\":0,\"sec\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 680,
+        "wires": [
+            [
+                "f1a2b3c4d5e6781f"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6781f",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "DL: RTC setzen [3]",
+        "func": "var d = msg.payload;\nvar yr = d.year;\nvar buf = Buffer.from([\n    3,\n    (yr >> 8) & 0xFF, yr & 0xFF,\n    d.month, d.day, d.hour, d.min, d.sec\n]);\nmsg.topic = \"v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/down/push\";\nmsg.payload = JSON.stringify({\n    downlinks: [{\n        f_port: 1,\n        frm_payload: buf.toString(\"base64\"),\n        priority: \"NORMAL\"\n    }]\n});\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 680,
+        "wires": [
+            [
+                "f1a2b3c4d5e67821"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67815",
+        "type": "inject",
+        "z": "f1a2b3c4d5e67801",
+        "name": "18:00 täglich",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "00 18 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 140,
+        "y": 200,
+        "wires": [
+            [
+                "f1a2b3c4d5e67816"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67816",
+        "type": "influxdb in",
+        "z": "f1a2b3c4d5e67801",
+        "influxdb": "b40036b5788454b0",
+        "name": "Bodenfeuchte lesen",
+        "query": "from(bucket: \"iot-daten\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"hs-bewaesserung-beet-sued-mitte\")\n  |> filter(fn: (r) => r._field == \"water_SOIL_f\")\n  |> last()",
+        "rawOutput": false,
+        "precision": "",
+        "retentionPolicy": "",
+        "org": "hsorg",
+        "x": 300,
+        "y": 260,
+        "wires": [
+            [
+                "f1a2b3c4d5e67817"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67817",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Bodenfeuchte extrahieren",
+        "func": "if (msg.payload && msg.payload.length > 0) {\n    msg.soilMoisture = parseFloat(msg.payload[0]._value) || 0;\n} else {\n    node.warn('Kein Bodensensor-Wert in letzten 24h — überspringe Bewässerung');\n    msg.soilMoisture = 100; // kein Wert = sicher überspringen\n}\nnode.warn('Bodenfeuchte Beet Süd-Mitte: ' + msg.soilMoisture.toFixed(1) + '%');\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 320,
+        "wires": [
+            [
+                "f1a2b3c4d5e67818"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67818",
+        "type": "influxdb in",
+        "z": "f1a2b3c4d5e67801",
+        "influxdb": "b40036b5788454b0",
+        "name": "Regen heute",
+        "query": "from(bucket: \"iot-daten\")\n  |> range(start: today())\n  |> filter(fn: (r) => r._measurement == \"regensensor\")\n  |> filter(fn: (r) => r._field == \"mm\")\n  |> sum()",
+        "rawOutput": false,
+        "precision": "",
+        "retentionPolicy": "",
+        "org": "hsorg",
+        "x": 550,
+        "y": 380,
+        "wires": [
+            [
+                "f1a2b3c4d5e67819"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67819",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Regen extrahieren",
+        "func": "var rainToday = 0;\nif (msg.payload && msg.payload.length > 0) {\n    rainToday = parseFloat(msg.payload[0]._value) || 0;\n}\nmsg.rainToday = rainToday;\nnode.warn('Regen heute: ' + rainToday.toFixed(1) + ' mm');\nmsg.url = 'https://api.open-meteo.com/v1/forecast'\n    + '?latitude=48.6792063554118&longitude=8.90313130163122'\n    + '&hourly=precipitation&forecast_days=2&timezone=Europe%2FBerlin';\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 690,
+        "y": 440,
+        "wires": [
+            [
+                "f1a2b3c4d5e6781a"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6781a",
+        "type": "http request",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Wettervorhersage",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 910,
+        "y": 440,
+        "wires": [
+            [
+                "f1a2b3c4d5e6781b"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6781b",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Entscheidung",
+        "func": "// ── Schwellwerte (anpassbar) ───────────────────────────────────────\nvar SOIL_THRESH        = 25;   // % — unter diesem Wert Bewässerung nötig\nvar RAIN_TODAY_THRESH  = 3;    // mm — darüber heute bereits genug Regen\nvar RAIN_FORE_THRESH   = 5;    // mm — darüber in 12h Regen erwartet\n// ──────────────────────────────────────────────────────────────────\n\n// Nächste 12h Niederschlag aus Open-Meteo-Stundenwerten\nvar forecast12h = 0;\ntry {\n    var hourly = msg.payload.hourly;\n    var times  = hourly.time;\n    var precip = hourly.precipitation;\n    var now     = new Date();\n    var curHour = now.getHours();\n    var todayStr = now.toISOString().split('T')[0];\n    var count = 0;\n    for (var i = 0; i < times.length && count < 12; i++) {\n        var parts = times[i].split('T');\n        var d = parts[0];\n        var h = parseInt(parts[1].split(':')[0]);\n        if ((d === todayStr && h >= curHour) || d > todayStr) {\n            forecast12h += precip[i];\n            count++;\n        }\n    }\n    forecast12h = parseFloat(forecast12h.toFixed(1));\n} catch(e) {\n    node.warn('Wetter-Parse-Fehler: ' + e.message);\n}\n\nvar soil      = msg.soilMoisture;\nvar rainToday = msg.rainToday || 0;\nvar cntr = 0;\nvar skipReason = '';\n\nif (soil >= SOIL_THRESH) {\n    skipReason = 'Bodenfeuchte ausreichend (' + soil.toFixed(1) + '%)';\n} else if (rainToday >= RAIN_TODAY_THRESH) {\n    skipReason = 'Regen heute: ' + rainToday.toFixed(1) + ' mm';\n} else if (forecast12h >= RAIN_FORE_THRESH) {\n    skipReason = 'Regen vorhergesagt: ' + forecast12h.toFixed(1) + ' mm';\n} else {\n    if (soil < 15) {\n        cntr = 1000;\n    } else {\n        cntr = Math.round(1000 - 400 * (soil - 15) / (SOIL_THRESH - 15));\n        cntr = Math.max(200, Math.min(600, cntr));\n    }\n}\n\nmsg.cntr        = cntr;\nmsg.forecast12h = forecast12h;\nmsg.decision    = cntr > 0 ? 'BEREGNEN' : 'ÜBERSPRINGEN';\nmsg.skipReason  = skipReason;\n\nnode.warn('Beet Süd-Mitte Entscheidung: ' + msg.decision + ' cntr=' + cntr + ' cL (' + (cntr/100).toFixed(1) + ' L)'\n    + ' soil=' + soil.toFixed(1) + '% regen=' + rainToday.toFixed(1)\n    + 'mm vorhersage=' + forecast12h + 'mm');\n\nreturn [msg, msg];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1100,
+        "y": 440,
+        "wires": [
+            [
+                "f1a2b3c4d5e6781c"
+            ],
+            [
+                "f1a2b3c4d5e6781d"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6781c",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Downlink cntrValue",
+        "func": "var cntr = msg.cntr || 0;\nvar bytes = [4, (cntr >> 8) & 0xFF, cntr & 0xFF];\nmsg.topic = 'v3/hs-garden@ttn/devices/hs-bewaesserung-beet-sued-mitte/down/push';\nmsg.payload = JSON.stringify({downlinks:[{f_port:1,\n    frm_payload: Buffer.from(bytes).toString('base64'), priority:'NORMAL'}]});\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 420,
+        "wires": [
+            [
+                "f1a2b3c4d5e67821"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e6781d",
+        "type": "function",
+        "z": "f1a2b3c4d5e67801",
+        "name": "Telegram Entscheidung",
+        "func": "var icon = msg.cntr > 0 ? '\\u{1F4A7}' : '\\u2600\\uFE0F';\nvar text = icon + ' Gartenbewässerung Beet Süd-Mitte ' + msg.decision + '\\n'\n    + 'Bodenfeuchte: ' + msg.soilMoisture.toFixed(1) + '%\\n'\n    + 'Regen heute: '  + msg.rainToday.toFixed(1) + ' mm\\n'\n    + 'Vorhersage 12h: ' + msg.forecast12h.toFixed(1) + ' mm';\nif (msg.cntr > 0) {\n    text += '\\nMenge: ' + (msg.cntr / 100).toFixed(1) + ' L';\n} else {\n    text += '\\nGrund: ' + msg.skipReason;\n}\nmsg.payload = {chatId: 5846653852, type: 'message', content: text};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1350,
+        "y": 460,
+        "wires": [
+            [
+                "f1a2b3c4d5e6780b"
+            ]
+        ]
+    },
+    {
+        "id": "f1a2b3c4d5e67821",
+        "type": "mqtt out",
+        "z": "f1a2b3c4d5e67801",
+        "name": "hs-garden-beet-sued-mitte",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "1bafccebd3263fc5",
+        "x": 1720,
+        "y": 560,
+        "wires": []
+    }
+]
