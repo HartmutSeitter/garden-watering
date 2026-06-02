@@ -1,0 +1,114 @@
+[
+    {
+        "id": "rak_mqtt_node01",
+        "type": "mqtt in",
+        "z": "6d502ec9.7e555",
+        "name": "RAK node-01 (panorama)",
+        "topic": "v3/+/devices/hs-rak-bodensensor-panorama/up",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "9a7829bbcfc24155",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 330,
+        "y": 340,
+        "wires": [
+            [
+                "rak_func_node01"
+            ]
+        ]
+    },
+    {
+        "id": "rak_func_node01",
+        "type": "function",
+        "z": "6d502ec9.7e555",
+        "name": "decode panorama",
+        "func": "var dp = msg.payload.uplink_message.decoded_payload;\n\nmsg.payload = {};\n\nmsg.payload.Bat_f           = parseFloat(dp.Bat);\nmsg.payload.TempC_DS18B20_f = parseFloat(dp.TempC_DS18B20);\nmsg.payload.conduct_SOIL_f  = parseFloat(dp.conduct_SOIL);\nmsg.payload.temp_SOIL_f     = parseFloat(dp.temp_SOIL);\nmsg.payload.water_SOIL_f    = parseFloat(dp.water_SOIL);\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 620,
+        "y": 340,
+        "wires": [
+            [
+                "rak_influx_node01"
+            ]
+        ]
+    },
+    {
+        "id": "rak_influx_node01",
+        "type": "influxdb out",
+        "z": "6d502ec9.7e555",
+        "influxdb": "9fbf2890.9bddd",
+        "name": "",
+        "measurement": "hs-rak-bodensensor-panorama",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "hsorg",
+        "bucket": "iot-daten",
+        "x": 920,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "rak_mqtt_node02",
+        "type": "mqtt in",
+        "z": "6d502ec9.7e555",
+        "name": "RAK node-02 (beet-sued-mitte)",
+        "topic": "v3/+/devices/hs-bodensensor-beet-sued-mitte/up",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "9a7829bbcfc24155",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 330,
+        "y": 440,
+        "wires": [
+            [
+                "rak_func_node02"
+            ]
+        ]
+    },
+    {
+        "id": "rak_func_node02",
+        "type": "function",
+        "z": "6d502ec9.7e555",
+        "name": "decode beet-sued-mitte",
+        "func": "var dp = msg.payload.uplink_message.decoded_payload;\n\nmsg.payload = {};\n\nmsg.payload.Bat_f           = parseFloat(dp.Bat);\nmsg.payload.TempC_DS18B20_f = parseFloat(dp.TempC_DS18B20);\nmsg.payload.conduct_SOIL_f  = parseFloat(dp.conduct_SOIL);\nmsg.payload.temp_SOIL_f     = parseFloat(dp.temp_SOIL);\nmsg.payload.water_SOIL_f    = parseFloat(dp.water_SOIL);\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 620,
+        "y": 440,
+        "wires": [
+            [
+                "rak_influx_node02"
+            ]
+        ]
+    },
+    {
+        "id": "rak_influx_node02",
+        "type": "influxdb out",
+        "z": "6d502ec9.7e555",
+        "influxdb": "9fbf2890.9bddd",
+        "name": "",
+        "measurement": "hs-rak-bodensensor-beet-sued-mitte",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "hsorg",
+        "bucket": "iot-daten",
+        "x": 920,
+        "y": 440,
+        "wires": []
+    }
+]

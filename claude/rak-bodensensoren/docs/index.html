@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAK Bodensensoren — Projektdokumentation</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --bg2: #1a1d27;
+      --bg3: #222636;
+      --border: #2e3248;
+      --text: #d4d8f0;
+      --text-muted: #7a82a8;
+      --accent: #4f8ef7;
+      --accent2: #7c5cbf;
+      --green: #3fb68b;
+      --yellow: #e8c547;
+      --red: #e05c5c;
+      --code-bg: #13161f;
+      --sidebar-w: 260px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* SIDEBAR */
+    nav {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    nav .logo {
+      padding: 0 20px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    nav .logo h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    nav .logo p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    nav a {
+      display: block;
+      padding: 6px 20px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      border-left: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    nav a:hover { color: var(--text); background: var(--bg3); }
+    nav .nav-section {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 16px 20px 4px;
+    }
+
+    /* MAIN */
+    main {
+      flex: 1;
+      padding: 48px 56px;
+      max-width: 900px;
+    }
+    h1.page-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 40px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      margin: 48px 0 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      scroll-margin-top: 24px;
+    }
+    h2:first-of-type { border-top: none; margin-top: 0; }
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 28px 0 10px;
+      scroll-margin-top: 24px;
+    }
+    p { margin-bottom: 12px; }
+
+    /* CARDS */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card .label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .card .value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .card .sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* TABLES */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 13.5px;
+    }
+    th {
+      background: var(--bg3);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg3); }
+    td code, th code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+
+    /* CODE BLOCKS */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 14px 0 22px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #c8cee8;
+    }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 12.5px;
+      background: var(--bg3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #a9b8e8;
+    }
+    pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+
+    /* CALLOUTS */
+    .callout {
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      border-left: 3px solid;
+      font-size: 13.5px;
+    }
+    .callout.warn {
+      background: rgba(232, 197, 71, 0.08);
+      border-color: var(--yellow);
+      color: #d4c17a;
+    }
+    .callout.info {
+      background: rgba(79, 142, 247, 0.08);
+      border-color: var(--accent);
+      color: #8aadf4;
+    }
+    .callout.ok {
+      background: rgba(63, 182, 139, 0.08);
+      border-color: var(--green);
+      color: #6fcfab;
+    }
+    .callout.err {
+      background: rgba(224, 92, 92, 0.08);
+      border-color: var(--red);
+      color: #e08080;
+    }
+    .callout strong { color: inherit; }
+
+    /* BADGES */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .badge.green { background: rgba(63, 182, 139, 0.15); color: var(--green); }
+    .badge.yellow { background: rgba(232, 197, 71, 0.15); color: var(--yellow); }
+    .badge.red { background: rgba(224, 92, 92, 0.15); color: var(--red); }
+    .badge.blue { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+
+    /* ARCHITECTURE DIAGRAM */
+    .arch {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px;
+      margin: 20px 0;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.9;
+      color: var(--text-muted);
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .arch .box { color: var(--text); }
+    .arch .arrow { color: var(--accent); }
+    .arch .label { color: var(--yellow); }
+
+    ul, ol {
+      padding-left: 22px;
+      margin-bottom: 12px;
+    }
+    li { margin-bottom: 4px; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .two-col .card { margin: 0; }
+
+    footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <h1>RAK Bodensensoren</h1>
+    <p>Projektdokumentation · Mai 2026</p>
+  </div>
+  <div class="nav-section">Überblick</div>
+  <a href="#ueberblick">Systemarchitektur</a>
+  <a href="#hardware">Hardware</a>
+  <div class="nav-section">Firmware</div>
+  <a href="#platformio">PlatformIO Setup</a>
+  <a href="#lorawan">LoRaWAN / TTN</a>
+  <a href="#modbus">Modbus / Sensor</a>
+  <a href="#payload">Payload-Format</a>
+  <a href="#watchdog">Watchdog</a>
+  <a href="#intervall">Sendeintervall</a>
+  <div class="nav-section">Backend</div>
+  <a href="#nodered">Node-RED</a>
+  <a href="#influxdb">InfluxDB</a>
+  <div class="nav-section">Betrieb</div>
+  <a href="#strom">Stromverbrauch</a>
+  <a href="#setup">Inbetriebnahme</a>
+  <a href="#probleme">Bekannte Probleme</a>
+</nav>
+
+<main>
+  <h1 class="page-title">RAK WisBlock Bodensensoren</h1>
+  <p class="subtitle">
+    Zwei energieautarke LoRaWAN-Nodes zur Erfassung von Bodenfeuchte, Bodentemperatur
+    und elektrischer Leitfähigkeit (EC). Betrieb mit 18650-Akku + Solarpanel,
+    Datenübertragung via TTN nach InfluxDB / Node-RED.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="ueberblick">Systemarchitektur</h2>
+
+  <div class="arch"><span class="box">┌─────────────────────────────────────────────────────────────────────┐
+│                        Node-01 / Node-02                            │
+│                                                                     │
+│  ┌──────────────┐  RS485/Modbus RTU   ┌────────────────────────┐   │
+│  │  CWT-SOIL    │◄────────────────────│  RAK5802               │   │
+│  │  THC-S       │   4800 8N1          │  (TP8485E RS485)       │   │
+│  │  Sensor      │                     └──────────┬─────────────┘   │
+│  └──────────────┘                                │ UART Serial1    │
+│                                                  ▼                 │
+│                                     ┌────────────────────────┐     │
+│                                     │  RAK4631               │     │
+│                                     │  nRF52840 + SX1262     │     │
+│                                     │  LoRaWAN OTAA EU868    │     │
+│                                     └──────────┬─────────────┘     │
+│                                                │                   │
+│  ┌──────────────┐                              │ SPI               │
+│  │  18650 LiPo  │◄─────── WB_A0 (ADC) ────────┘                   │
+│  │  + Solar     │                                                   │
+│  └──────────────┘                                                   │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │ LoRaWAN (EU868)
+                               ▼
+                    ┌─────────────────────┐
+                    │   The Things        │
+                    │   Network (TTN)     │
+                    │   App: hs-boden-    │
+                    │   sensor            │
+                    └──────────┬──────────┘
+                               │ MQTT
+                               ▼
+                    ┌─────────────────────┐      ┌─────────────────┐
+                    │   Node-RED          │─────▶│  InfluxDB v2    │
+                    │   Homeserver .49    │      │  Org: hsorg     │
+                    └─────────────────────┘      │  Bucket:        │
+                                                 │  iot-daten      │
+                                                 └─────────────────┘</span></div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="hardware">Hardware</h2>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Mikrocontroller</div>
+      <div class="value">RAK4631</div>
+      <div class="sub">nRF52840 + SX1262</div>
+    </div>
+    <div class="card">
+      <div class="label">RS485-Modul</div>
+      <div class="value">RAK5802</div>
+      <div class="sub">TP8485E, auto DIR</div>
+    </div>
+    <div class="card">
+      <div class="label">Sensor</div>
+      <div class="value">CWT-SOIL-THC-S</div>
+      <div class="sub">Modbus RTU, 4800 8N1</div>
+    </div>
+    <div class="card">
+      <div class="label">Akku</div>
+      <div class="value">18650 LiPo</div>
+      <div class="sub">Onboard-Laderegler</div>
+    </div>
+    <div class="card">
+      <div class="label">Solar (Node-01)</div>
+      <div class="value">RAK 5×10 cm</div>
+      <div class="sub">~500 mAh/Tag bei 5h Sonne</div>
+    </div>
+    <div class="card">
+      <div class="label">Protokoll</div>
+      <div class="value">LoRaWAN EU868</div>
+      <div class="sub">OTAA, CLASS_A, DR_0</div>
+    </div>
+  </div>
+
+  <h3>Pin-Belegung</h3>
+  <table>
+    <thead><tr><th>Signal</th><th>Pin / Define</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>SPI MISO</td><td><code>45</code></td><td>LoRa SX1262</td></tr>
+      <tr><td>SPI MOSI</td><td><code>44</code></td><td>LoRa SX1262</td></tr>
+      <tr><td>SPI SCK</td><td><code>43</code></td><td>LoRa SX1262</td></tr>
+      <tr><td>SPI SS</td><td><code>42</code></td><td>LoRa SX1262 CS</td></tr>
+      <tr><td>RS485 TX</td><td><code>16</code></td><td>Serial1 TX → RAK5802</td></tr>
+      <tr><td>RS485 RX</td><td><code>15</code></td><td>Serial1 RX ← RAK5802</td></tr>
+      <tr><td>Sensor Power</td><td><code>WB_IO2</code> (P1.02)</td><td>3V3_S-Schiene, HIGH = an</td></tr>
+      <tr><td>Batterie ADC</td><td><code>WB_A0</code> (P0.05/AIN3)</td><td>Spannungsteiler 1:2, empirisch kalibriert</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <strong>RAK5802 Besonderheit:</strong> Der TP8485E-Transceiver schaltet die RS485-Richtung automatisch — kein DE/RE-Pin wird benötigt. Dies vereinfacht die Firmware, erfordert aber einen atomaren Sendevorgang ohne Byte-Pausen (siehe BufferedStream).
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="platformio">PlatformIO Setup</h2>
+
+  <p>Das Firmware-Projekt liegt unter <code>/Users/hs/Documents/PlatformIO/Projects/hs-rak-bodensensor/</code>. Es enthält zwei Build-Environments für die beiden Nodes — beide teilen exakt denselben Quellcode, die Node-Identität wird per <code>NODE_ID</code>-Build-Flag gesetzt.</p>
+
+  <h3>platformio.ini</h3>
+<pre>[env:node01-panorama]
+platform = nordicnrf52@9.5.0
+board     = wiscore_rak4631
+framework = arduino
+build_flags =
+    -D ARDUINO_WISCORE_RAK4631
+    -D USE_LFXO
+    -I include
+    -D NODE_ID=1
+    -Wno-unused-function
+lib_deps =
+    beegee-tokyo/SX126x-Arduino @ ^2.0.22
+    4-20ma/ModbusMaster @ ^2.0.1
+
+[env:node02-beet-sued]
+; identisch, nur NODE_ID=2
+build_flags = ... -D NODE_ID=2</pre>
+
+  <h3>Verzeichnisstruktur</h3>
+<pre>hs-rak-bodensensor/
+├── src/
+│   └── main.cpp            ← Firmware (für beide Nodes)
+├── include/
+│   ├── keys.h              ← OTAA-Keys (gitignored, lokal)
+│   ├── keys.h.example      ← Vorlage (im Repo)
+│   ├── variant.h           ← RAK4631 Board-Definition (gitignored)
+│   └── boards/
+│       └── wiscore_rak4631.json
+├── platformio.ini
+└── .gitignore              ← enthält: include/keys.h</pre>
+
+  <h3>Credentials-Verwaltung</h3>
+  <div class="callout ok">
+    <strong>keys.h ist gitignored</strong> — OTAA-Keys werden nie ins Repo eingecheckt. Für einen neuen Aufbau: <code>cp include/keys.h.example include/keys.h</code> und eigene TTN-Werte eintragen.
+  </div>
+
+<pre>// include/keys.h — Struktur
+#if NODE_ID == 1
+static uint8_t nodeDeviceEUI[8] = { /* aus TTN */ };
+static uint8_t nodeAppEUI[8]    = { /* aus TTN */ };
+static uint8_t nodeAppKey[16]   = { /* aus TTN */ };
+#elif NODE_ID == 2
+// ...
+#endif</pre>
+
+  <h3>Firmware flashen</h3>
+<pre># Node-01 bauen und flashen
+pio run -e node01-panorama -t upload
+
+# Node-02 bauen und flashen
+pio run -e node02-beet-sued -t upload
+
+# Serial Monitor (115200 Baud)
+pio device monitor</pre>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="lorawan">LoRaWAN / TTN</h2>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="label">Node-01</div>
+      <div class="value">hs-bodensensor-panorama</div>
+      <div class="sub">DevEUI: AC1F09FFFE285AB2</div>
+    </div>
+    <div class="card">
+      <div class="label">Node-02</div>
+      <div class="value">hs-bodensensor-beet-sued-mitte</div>
+      <div class="sub">DevEUI: 70B3D57ED0077023</div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Parameter</th><th>Wert</th></tr></thead>
+    <tbody>
+      <tr><td>TTN Application</td><td><code>hs-bodensensor</code></td></tr>
+      <tr><td>Aktivierungsverfahren</td><td>OTAA</td></tr>
+      <tr><td>Region</td><td>EU868</td></tr>
+      <tr><td>Device Class</td><td>CLASS_A</td></tr>
+      <tr><td>Data Rate</td><td>DR_0 (SF12 / 250 bps)</td></tr>
+      <tr><td>ADR</td><td>Off (feste DR für Zuverlässigkeit)</td></tr>
+      <tr><td>Payload Decoder</td><td>Dragino-kompatibler JS-Decoder (device-level)</td></tr>
+      <tr><td>MQTT Topic (Node-01)</td><td><code>v3/+/devices/hs-bodensensor-panorama/up</code></td></tr>
+      <tr><td>MQTT Topic (Node-02)</td><td><code>v3/+/devices/hs-bodensensor-beet-sued-mitte/up</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Antenna-Switch Fix</h3>
+  <p>Der RAK4631 benötigt einen manuellen Register-Write, damit der DIO2-Pin den Antenna-Switch korrekt steuert — ohne diesen Fix wird kein LoRa-Signal gesendet:</p>
+<pre>// In setup(), nach lora_rak4630_init():
+uint8_t dio2_config = 0x01;
+SX126xWriteRegisters(0x058B, &amp;dio2_config, 1);</pre>
+
+  <h3>Join-Flag — volatile</h3>
+  <div class="callout warn">
+    <strong>Kritisch:</strong> Das Join-Flag muss als <code>volatile bool</code> deklariert sein. Ohne <code>volatile</code> optimiert der Compiler den Wert weg — <code>loop()</code> sieht immer <code>false</code> und sendet nie, obwohl der Join in TTN sichtbar ist.
+  </div>
+<pre>static volatile bool joined = false;
+
+void lorawan_has_joined_handler(void) {
+    joined = true;  // Callback aus IRQ-Kontext
+}
+
+void loop() {
+    if (!joined) return;  // kein Send vor bestätigtem Join
+    // ...
+}</pre>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="modbus">Modbus / Sensor</h2>
+
+  <h3>Kommunikationsparameter</h3>
+  <table>
+    <thead><tr><th>Parameter</th><th>Wert</th></tr></thead>
+    <tbody>
+      <tr><td>Protokoll</td><td>Modbus RTU</td></tr>
+      <tr><td>Baudrate</td><td><strong>4800 Baud</strong> <span class="badge yellow">nicht 9600!</span></td></tr>
+      <tr><td>Framing</td><td>8N1</td></tr>
+      <tr><td>Slave-Adresse</td><td><code>0x01</code></td></tr>
+      <tr><td>Funktion</td><td>Read Holding Registers (<code>0x03</code>)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <strong>4800 Baud:</strong> Der CWT-SOIL-THC-S kommuniziert entgegen mancher Dokumentation auf 4800 Baud. Bei 9600 Baud antwortet der Sensor nicht.
+  </div>
+
+  <h3>Register-Map</h3>
+  <table>
+    <thead><tr><th>Register</th><th>Messgröße</th><th>Typ</th><th>Skalierung</th><th>Beispiel</th></tr></thead>
+    <tbody>
+      <tr><td><code>0x0000</code></td><td>Bodenfeuchte</td><td>uint16</td><td>÷ 10 = %</td><td>451 → 45,1 %</td></tr>
+      <tr><td><code>0x0001</code></td><td>Bodentemperatur</td><td>int16 (signed)</td><td>÷ 10 = °C</td><td>183 → 18,3 °C</td></tr>
+      <tr><td><code>0x0002</code></td><td>EC-Leitfähigkeit</td><td>uint16</td><td>direkt µS/cm</td><td>350 → 350 µS/cm</td></tr>
+    </tbody>
+  </table>
+
+  <h3>BufferedStream — Atomarer RS485-Versand</h3>
+  <p>Modbus RTU erfordert, dass alle Bytes eines Frames innerhalb von maximal 1,5 Zeichen-Längen aufeinanderfolgen (3,1 ms bei 4800 Baud). FreeRTOS-Task-Switches zwischen einzelnen <code>write()</code>-Aufrufen würden den Frame unterbrechen. Die <code>BufferedStream</code>-Klasse puffert alle Bytes und sendet sie in einem einzigen DMA-Transfer:</p>
+<pre>class BufferedStream : public Stream {
+    // Puffert alle write()-Aufrufe
+    // flush() → einmaliger DMA-Transfer via Serial1.write(buf, len)
+};
+
+void postTransmission() {
+    modbusSerial.flush(); // atomarer DMA-Transfer
+    delay(5);             // Stop-Bit physisch ausgesendet lassen
+}</pre>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="payload">Payload-Format</h2>
+
+  <p>10-Byte-Payload, Dragino-kompatibel (Port 2). Der Sensor liefert Werte ×10, der Dragino-Decoder erwartet ×100 — daher wird im Code mit ×10 multipliziert:</p>
+<pre>sendSensorData(rawTemp * 10, rawHum * 10, rawEC);</pre>
+
+  <table>
+    <thead><tr><th>Bytes</th><th>Messgröße</th><th>Encoding</th><th>Decoder-Formel</th><th>Beispiel</th></tr></thead>
+    <tbody>
+      <tr><td><code>0–1</code></td><td>Batteriespannung</td><td>uint16, direkt in mV</td><td><code>val / 1000</code> V</td><td>4050 → 4,05 V</td></tr>
+      <tr><td><code>2–3</code></td><td>DS18B20 Temp</td><td>int16, ×10</td><td><code>val / 10</code> °C</td><td>225 → 22,5 °C (fix 0 wenn kein Sensor)</td></tr>
+      <tr><td><code>4–5</code></td><td>Bodenfeuchte</td><td>uint16, ×100</td><td><code>val / 100</code> %</td><td>4512 → 45,12 %</td></tr>
+      <tr><td><code>6–7</code></td><td>Bodentemperatur</td><td>int16, ×100</td><td><code>val / 100</code> °C</td><td>1830 → 18,30 °C</td></tr>
+      <tr><td><code>8–9</code></td><td>EC-Leitfähigkeit</td><td>uint16, direkt µS/cm</td><td><code>val</code></td><td>350 → 350 µS/cm</td></tr>
+    </tbody>
+  </table>
+
+  <h3>TTN Payload Decoder (JavaScript)</h3>
+<pre>function decodeUplink(input) {
+  var bytes = input.bytes;
+  return { data: {
+    Bat_f:           (bytes[0] &lt;&lt; 8 | bytes[1]) / 1000,
+    TempC_DS18B20_f: (bytes[2] &lt;&lt; 8 | bytes[3]) / 10,
+    water_SOIL_f:    (bytes[4] &lt;&lt; 8 | bytes[5]) / 100,
+    temp_SOIL_f:     (bytes[6] &lt;&lt; 8 | bytes[7]) / 100,
+    conduct_SOIL_f:   bytes[8] &lt;&lt; 8 | bytes[9]
+  }};
+}</pre>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="watchdog">Hardware-Watchdog</h2>
+
+  <p>Der nRF52840-interne WDT wird mit 120 Sekunden konfiguriert. 60 Sekunden waren zu kurz — LoRa TX + beide RX-Fenster (RX1 + RX2) können zusammen mehrere Sekunden dauern, dazu kommen Modbus-Timeouts.</p>
+
+<pre>void initWatchdog() {
+    NRF_WDT->CONFIG      = 0x01;       // läuft auch im Sleep
+    NRF_WDT->CRV         = 32768 * 120; // 120 Sekunden
+    NRF_WDT->RREN        = 0x01;       // Reload-Register 0
+    NRF_WDT->TASKS_START = 1;
+}
+
+// In loop() UND nach jedem Modbus-Read:
+void feedWatchdog() {
+    NRF_WDT->RR[0] = WDT_RR_RR_Reload;
+}</pre>
+
+  <div class="callout info">
+    Der WDT wird an zwei Stellen gefüttert: am Anfang von <code>loop()</code> und direkt nach <code>node.readHoldingRegisters()</code>, da der Modbus-Call blockierend ist und bis zu mehrere Sekunden dauern kann.
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="intervall">Adaptives Sendeintervall</h2>
+
+  <p>Das Sendeintervall passt sich dynamisch an die Batteriespannung an. Erster Send erfolgt 1 Minute nach Boot.</p>
+
+  <table>
+    <thead><tr><th>Batteriespannung</th><th>Intervall</th><th>Begründung</th></tr></thead>
+    <tbody>
+      <tr><td>≥ 4,0 V <span class="badge green">Normal</span></td><td>20 Minuten</td><td>Vollgeladen / Solar aktiv</td></tr>
+      <tr><td>3,9 – 4,0 V <span class="badge yellow">Gedrosselt</span></td><td>30 Minuten</td><td>Mittlerer Ladestand</td></tr>
+      <tr><td>&lt; 3,9 V <span class="badge red">Sparmodus</span></td><td>60 Minuten</td><td>Puffer vor Ausfall bei ~3,75 V</td></tr>
+    </tbody>
+  </table>
+
+<pre>uint16_t batMV = readBatteryMV();
+if      (batMV &lt; 3900) sendInterval = 3600000; // 60 min
+else if (batMV &lt; 4000) sendInterval = 1800000; // 30 min
+else                   sendInterval = 1200000; // 20 min</pre>
+
+  <h3>Batterie-ADC Kalibrierung</h3>
+<pre>uint16_t readBatteryMV() {
+    analogReference(AR_INTERNAL_3_0);
+    analogReadResolution(12);
+    float raw = analogRead(WB_A0);   // WB_A0 = P0.05 / AIN3
+    analogReference(AR_DEFAULT);
+    analogReadResolution(10);
+    // Spannungsteiler 1:2, empirisch kalibriert
+    return (uint16_t)(raw * 2571.0 / 4096.0 * 2.0);
+}</pre>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="nodered">Node-RED</h2>
+
+  <p>Flow-Datei: <code>/Users/hs/Documents/claude/rak-bodensensoren/nodered-rak-flow.json</code></p>
+  <p>Deployment auf Homeserver <code>.49</code> (Docker-Stack).</p>
+
+  <h3>Datenfluss</h3>
+  <div class="arch"><span class="box">MQTT Subscribe (TTN)
+   ↓  topic: v3/+/devices/hs-bodensensor-{name}/up
+JSON Parse
+   ↓  uplink_message.decoded_payload
+Field-Extraktion + Typcast (→ float)
+   ↓
+InfluxDB v2 Write
+   ↓  measurement: hs-rak-bodensensor-{panorama|beet-sued-mitte}
+   ↓  fields: Bat_f, TempC_DS18B20_f, water_SOIL_f, temp_SOIL_f, conduct_SOIL_f</span></div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="influxdb">InfluxDB v2</h2>
+
+  <table>
+    <thead><tr><th>Parameter</th><th>Wert</th></tr></thead>
+    <tbody>
+      <tr><td>Host</td><td>Homeserver <code>.49</code> (Docker)</td></tr>
+      <tr><td>Organisation</td><td><code>hsorg</code></td></tr>
+      <tr><td>Bucket</td><td><code>iot-daten</code></td></tr>
+      <tr><td>Measurement Node-01</td><td><code>hs-rak-bodensensor-panorama</code></td></tr>
+      <tr><td>Measurement Node-02</td><td><code>hs-rak-bodensensor-beet-sued-mitte</code></td></tr>
+      <tr><td>Fields</td><td><code>Bat_f</code>, <code>TempC_DS18B20_f</code>, <code>water_SOIL_f</code>, <code>temp_SOIL_f</code>, <code>conduct_SOIL_f</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Nützliche Queries (Shell)</h3>
+<pre># Letzte 7 Tage — Datenpunkte zählen
+docker exec -it pi-influxdb-1 influx query \
+  --token "&lt;token&gt;" --org hsorg \
+  'from(bucket: "iot-daten")
+   |> range(start: -7d)
+   |> filter(fn: (r) => r._measurement == "hs-rak-bodensensor-panorama")
+   |> count()'
+
+# Alle Measurements anzeigen
+docker exec -it pi-influxdb-1 influx query \
+  --token "&lt;token&gt;" --org hsorg \
+  'import "influxdata/influxdb/schema"
+   schema.measurements(bucket: "iot-daten")'
+
+# Daten löschen (Zeiten in UTC — Deutschland CEST = UTC+2)
+docker exec -it pi-influxdb-1 influx delete \
+  --token "&lt;token&gt;" --org hsorg --bucket iot-daten \
+  --start "2026-01-01T00:00:00Z" --stop "2026-01-02T00:00:00Z" \
+  --predicate '_measurement="hs-rak-bodensensor-panorama"'</pre>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="strom">Stromverbrauch</h2>
+
+  <table>
+    <thead><tr><th>Betriebszustand</th><th>Strom</th></tr></thead>
+    <tbody>
+      <tr><td>Leerlauf (WFI / Sleep)</td><td>5–8 mA</td></tr>
+      <tr><td>LoRa TX-Burst</td><td>~100 mA für ~2 s</td></tr>
+      <tr><td>Durchschnitt bei 20-min-Intervall</td><td>~6 mA</td></tr>
+      <tr><td>Tagesverbrauch bei 20-min-Intervall</td><td>~150 mAh</td></tr>
+      <tr><td>Solar-Ertrag (5×10 cm, 5h Sonne)</td><td>~500 mAh</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout ok">
+    <strong>Energiebilanz:</strong> Das kleine RAK-Solarpanel liefert bei ausreichend Sonnenschein (~5h/Tag) rund 500 mAh — mehr als das Dreifache des Tagesverbrauchs bei 20-Minuten-Intervall. Node-01 (Panorama) ist damit energieautark.
+  </div>
+
+  <h3>Praxismessungen</h3>
+  <table>
+    <thead><tr><th>Konfiguration</th><th>Laufzeit</th></tr></thead>
+    <tbody>
+      <tr><td>2-Minuten-Intervall, 18650 ohne Solar</td><td>~6 Tage</td></tr>
+      <tr><td>20-Minuten-Intervall + Solar</td><td>unbegrenzt (energieautark)</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="setup">Inbetriebnahme eines neuen Nodes</h2>
+
+  <ol>
+    <li>TTN Console: neue Device-Registrierung in App <code>hs-bodensensor</code>, OTAA, DevEUI vom Aufkleber.</li>
+    <li><code>cp include/keys.h.example include/keys.h</code> — Keys aus TTN eintragen.</li>
+    <li>In <code>platformio.ini</code> ggf. neues Environment mit <code>NODE_ID=3</code> anlegen.</li>
+    <li>Payload Decoder (Dragino-JS) auf device-level in TTN hinterlegen.</li>
+    <li>Flashen: <code>pio run -e node0X -t upload</code></li>
+    <li>Serial Monitor öffnen, Join-Meldung abwarten (<code>&gt;&gt;&gt; JOIN OK! &lt;&lt;&lt;</code>).</li>
+    <li>In Node-RED: MQTT-Subscribe für neues TTN-Topic, InfluxDB-Write mit neuem Measurement.</li>
+  </ol>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <h2 id="probleme">Bekannte Probleme &amp; Lösungen</h2>
+
+  <h3>Node-02 — Hänger nach einiger Zeit</h3>
+  <div class="callout err">
+    <strong>Symptom:</strong> Join in TTN sichtbar, danach kein einziger Uplink.<br>
+    <strong>Ursache 1:</strong> <code>volatile</code> fehlt am Join-Flag → Compiler-Optimierung liest immer <code>false</code>.<br>
+    <strong>Ursache 2:</strong> Schlechter Batteriehalter-Kontakt → Spannungseinbrüche → RAM-Korruption.<br>
+    <strong>Lösung:</strong> <code>static volatile bool joined</code>, WDT auf 120s, Batteriehalter getauscht (Mai 2026).
+  </div>
+
+  <h3>Dragino LSE01 (separater Sensor)</h3>
+  <div class="callout err">
+    <strong>Problem:</strong> Nach Batteriewechsel alle Werte = 0, kein TX-Signal auf RS485.<br>
+    <strong>Diagnose:</strong> UART-TX-Pin des LSE01-MCU defekt (ESD-Schaden beim Batteriewechsel).<br>
+    <strong>Wichtig:</strong> LSE01 verwendet proprietäres Protokoll — nicht Modbus RTU, nicht mit RAK5802 kompatibel.<br>
+    <strong>Status:</strong> Support kontaktieren oder Gerät ersetzen. Die originale Bodensonde ist intakt.
+  </div>
+
+  <h3>Measurement-Namen (Mai 2026)</h3>
+  <div class="callout info">
+    Inkonsistente Measurement-Namen wurden korrigiert. Altes Measurement
+    <code>hs-bodensensor-beet-sued-mitte</code> in InfluxDB gelöscht,
+    neues Measurement <code>hs-rak-bodensensor-beet-sued-mitte</code> aktiv.
+    Node-RED-Flow entsprechend angepasst.
+  </div>
+
+  <h3>Credentials in Git-History (Mai 2026)</h3>
+  <div class="callout ok">
+    <strong>Behoben:</strong> OTAA-AppKeys wurden per <code>git-filter-repo --replace-text</code> aus der kompletten Git-History getilgt und durch <code>***REMOVED***</code> ersetzt. Aktueller Stand: Keys in gitignorierter <code>include/keys.h</code>, Vorlage in <code>keys.h.example</code>.
+  </div>
+
+  <footer>
+    RAK WisBlock Bodensensoren · Hartmut Seitter · Dokumentation erstellt Mai 2026
+  </footer>
+</main>
+
+</body>
+</html>
