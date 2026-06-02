@@ -191,7 +191,16 @@ void loop() {
   if ((millis() - check_on_off_time_timestamp) >= (CHECK_ON_OFF_TIME * 1000UL)) {
     check_on_off_time_timestamp = millis();
 
-    now = rtc.now();
+    {
+      DateTime candidate = rtc.now();
+      // Plausibilitätsprüfung: fehlerhafte I2C-Reads (z.B. 00:00:00 year=2000)
+      // führen sonst zum falschen "außerhalb Fenster"-Zweig → Cycling-Bug
+      if (candidate.year() >= 2024 && candidate.year() <= 2099 &&
+          candidate.month() >= 1   && candidate.month() <= 12) {
+        now = candidate;
+      }
+      // andernfalls: letzten bekannten guten Wert behalten
+    }
     bool was_on = valve_on;  // capture state before any changes
 
     if (maintenanceMode) {
