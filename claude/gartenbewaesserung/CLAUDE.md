@@ -224,6 +224,7 @@ Entscheidungslogik und Schwellwerte identisch mit Node 1.
 | RTC-Downlink abgelehnt "invalid values" | Ungültiger Wert im Inject-Payload (z.B. `"hour": 45`) | Validierung: year 2024–2099, month 1–12, day 1–31, hour 0–23, min 0–59, sec 0–59 |
 | NVS NOT_FOUND beim ersten Boot | NVS-Namespace "watering" existiert noch nicht | Harmlos — Default-Werte werden verwendet; verschwindet nach erstem gespeicherten Downlink |
 | Ventil cyclt on/off ohne sichtbaren Grund | DS3231 I2C-Fehler liefert Quatsch-Zeit (year=2000) → "außerhalb Fenster"-Zweig feuert fälschlicherweise → counterLimitReached/sensorTotalCntr werden resettet | RTC-Plausibilitätsprüfung in main.cpp: year 2024–2099 + month 1–12, sonst letzten guten Wert behalten |
+| Telegram: "Überspringen", Ventil öffnet trotzdem | TTN wiederholt unconfirmed Downlinks nicht — 18:00-Downlink geht verloren wenn Device Receive-Fenster verpasst; Device nutzt alten NVS-Wert | 19:30 Retry-Inject sendet cntr nochmal (alle 4 Nodes); cntr=0 bleibt cntr=0 (`\|\| 300` Bug gefixt) |
 
 ---
 
@@ -253,7 +254,7 @@ Entscheidungslogik und Schwellwerte identisch mit Node 1.
 
 ## Änderungshistorie
 
-### 2026-06-02 — RTC Cycling-Bug Fix + Node-RED InfluxDB-Tag Fix
+### 2026-06-02 — RTC Cycling-Bug Fix + Node-RED Downlink-Reliability
 
 **Firmware:**
 - `main.cpp`: RTC-Plausibilitätsprüfung hinzugefügt — intermittierende I2C-Fehler auf DS3231 können Quatsch-Zeiten zurückgeben (z.B. year=2000), was den "außerhalb Fenster"-Zweig fälschlicherweise auslöste und `counterLimitReached`/`sensorTotalCntr` zurücksetzte → Ventil cycelte on/off
@@ -263,7 +264,17 @@ Entscheidungslogik und Schwellwerte identisch mit Node 1.
 **Node-RED:**
 - Alle 4 Flow-JSON-Dateien erstmals in Git eingecheckt
 - `node` wird jetzt als InfluxDB-Tag (`msg.tags`) gesetzt statt als Feld — betrifft Event 1 (flow), Event 2 (schedule), Event 7 (irrigation) in allen 4 Flows
-- Auf Raspi .49 importiert via PUT /flow/{id} (2026-06-02)
+- Auf Raspi .49 importiert via PUT /flow/{id}
+
+**Node-RED — Downlink-Reliability (alle 4 Nodes):**
+
+*Problem:* TTN wiederholt unconfirmed Downlinks **nicht** — wenn das Gerät das Receive-Fenster nach dem 18:00-Uplink verpasst, bleibt der alte NVS-Wert aktiv und das Ventil öffnet trotz „Überspringen"-Entscheidung.
+
+*Lösung — 2-stufiger Downlink:*
+- **18:00 Uhr** (bestehend): Entscheidungslogik läuft, Telegram wird gesendet, cntr-Downlink gesendet. cntr-Wert wird in Flow-Kontext gespeichert (`flow.set('cntr', cntr)`)
+- **19:30 Uhr** (neu): Inject-Node liest gespeicherten cntr aus Flow-Kontext und sendet Downlink nochmals — ohne Telegram, ohne Wetterabfrage. Zwischen 19:30 und 20:00 gibt es ≥3 Uplinks → mindestens einer öffnet das Receive-Fenster.
+
+*Zusätzlicher Bugfix:* `DL: cntrValue [4]` (manueller Test-Knoten): `|| 300` durch `!== undefined ? ... : 300` ersetzt — cntr=0 wurde fälschlicherweise als 300 gesendet.
 
 ---
 
