@@ -514,7 +514,7 @@
         "z": "f1a2b3c4d5e67801",
         "influxdb": "b40036b5788454b0",
         "name": "Bodenfeuchte lesen",
-        "query": "from(bucket: \"iot-daten\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"hs-bewaesserung-beet-sued-mitte\")\n  |> filter(fn: (r) => r._field == \"water_SOIL_f\")\n  |> last()",
+        "query": "from(bucket: \"iot-daten\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"hs-rak-bodensensor-beet-sued-mitte\")\n  |> filter(fn: (r) => r._field == \"water_SOIL_f\")\n  |> last()",
         "rawOutput": false,
         "precision": "",
         "retentionPolicy": "",
