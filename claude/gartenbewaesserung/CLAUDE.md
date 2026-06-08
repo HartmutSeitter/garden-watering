@@ -225,6 +225,8 @@ Entscheidungslogik und Schwellwerte identisch mit Node 1.
 | NVS NOT_FOUND beim ersten Boot | NVS-Namespace "watering" existiert noch nicht | Harmlos — Default-Werte werden verwendet; verschwindet nach erstem gespeicherten Downlink |
 | Ventil cyclt on/off ohne sichtbaren Grund | DS3231 I2C-Fehler liefert Quatsch-Zeit (year=2000) → "außerhalb Fenster"-Zweig feuert fälschlicherweise → counterLimitReached/sensorTotalCntr werden resettet | RTC-Plausibilitätsprüfung in main.cpp: year 2024–2099 + month 1–12, sonst letzten guten Wert behalten |
 | Telegram: "Überspringen", Ventil öffnet trotzdem | TTN wiederholt unconfirmed Downlinks nicht — 18:00-Downlink geht verloren wenn Device Receive-Fenster verpasst; Device nutzt alten NVS-Wert | 19:30 Retry-Inject sendet cntr nochmal (alle 4 Nodes); cntr=0 bleibt cntr=0 (`\|\| 300` Bug gefixt) |
+| Node-RED: decode error beim ersten Uplink nach Join | TTN sendet auf dem uplink-Topic auch Join-Events ohne `uplink_message`-Feld → `Buffer.from(undefined)` wirft Fehler | Frühe Rückgabe `return null` wenn `msg.payload.uplink_message` fehlt |
+| Bodenfeuchte immer 100%, Bewässerung wird nie ausgelöst | InfluxDB-Abfrage in Nodes 2–4 verwendete falschen Measurement-Namen (`hs-bewaesserung-*`) statt des tatsächlichen RAK-Sensor-Namens (`hs-rak-bodensensor-*`) → kein Treffer → Fallback soilMoisture=100 | Measurement-Namen korrigiert: node-2/4 → `hs-rak-bodensensor-beet-sued-mitte`, node-3 → `hs-rak-bodensensor-sonnenbergstrasse` |
 
 ---
 
@@ -243,7 +245,7 @@ Entscheidungslogik und Schwellwerte identisch mit Node 1.
 - [x] Node 4: Firmware geflasht (`pio run -e node4 --target upload`)
 - [x] Node 4: Node-RED Flow importiert (`node-red-flow-garden-node-4.json`)
 - [x] Node-RED: alle 4 Flows auf Raspi .49 importiert (node als InfluxDB-Tag — 2026-06-02)
-- [ ] Node 4: Bodensensor-Measurement aktualisieren (aktuell temp. `hs-bewaesserung-beet-sued-mitte` → eigenes Measurement eintragen)
+- [ ] Node 4: Bodensensor-Measurement aktualisieren (aktuell temp. `hs-rak-bodensensor-beet-sued-mitte` → eigenes Measurement eintragen sobald RAK-Node aktiv)
 - [ ] Bodenfeuchte-Schwellwerte nach erster Saison kalibrieren
 - [ ] Node-RED: Event 4 Telegram-Nachricht testen (Bewässerung gestartet)
 - [ ] Node-RED: Event 7 Telegram-Nachricht testen (Bewässerung beendet mit Litern)
@@ -253,6 +255,25 @@ Entscheidungslogik und Schwellwerte identisch mit Node 1.
 ---
 
 ## Änderungshistorie
+
+### 2026-06-07 — InfluxDB Measurement-Namen korrigiert (Nodes 2–4)
+
+**Node-RED:**
+- Nodes 2–4: Bodensensor-Abfrage verwendete falschen Measurement-Namen (`hs-bewaesserung-*`) statt des tatsächlichen RAK-Sensor-Namens (`hs-rak-bodensensor-*`) → InfluxDB lieferte keine Daten → Fallback `soilMoisture = 100` → Bewässerung wurde immer übersprungen
+- Korrekturen:
+  - Node 2: `hs-bewaesserung-beet-sued-mitte` → `hs-rak-bodensensor-beet-sued-mitte`
+  - Node 3: `hs-bewaesserung-sonnenbergstr` → `hs-rak-bodensensor-sonnenbergstrasse`
+  - Node 4: `hs-bewaesserung-beet-sued-mitte` → `hs-rak-bodensensor-beet-sued-mitte` (temporär, bis eigener Sensor aktiv)
+
+---
+
+### 2026-06-03 — decode payload: Non-Uplink-Nachrichten ignorieren
+
+**Node-RED (alle 4 Flows):**
+- TTN sendet auf dem uplink-Topic auch Join-Events und Downlink-ACKs ohne `uplink_message`-Feld → `Buffer.from(undefined)` warf "decode error: The first argument must be of type string..."
+- Fix: frühe Rückgabe `return null` wenn `msg.payload.uplink_message` fehlt
+
+---
 
 ### 2026-06-02 — RTC Cycling-Bug Fix + Node-RED Downlink-Reliability
 
