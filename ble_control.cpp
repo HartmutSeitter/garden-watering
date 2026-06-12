@@ -3,6 +3,7 @@
 #include "ble_control.h"
 #include "flowsensor.h"
 #include "log.h"
+#include "main.h"
 
 bool maintenanceMode = false;
 unsigned long maintenanceStartMs = 0;
@@ -18,8 +19,8 @@ class ValveControlCallbacks : public NimBLECharacteristicCallbacks {
     if (pChar->getValue().size() > 0) {
       uint8_t cmd = pChar->getValue()[0];
       if (cmd == 0x01) {
-        flowAlarm           = false;  // clear latched alarms so maintenance can proceed
-        counterLimitReached = false;
+        flowAlarm = false;            // clear latched alarms so maintenance can proceed
+        clear_counter_limit();
         maintenanceMode     = true;
         maintenanceStartMs  = millis();
         digitalWrite(valve, HIGH);  // open valve immediately

@@ -75,10 +75,12 @@ void load_schedule() {
   offTimeSecond        = prefs.getUChar("offS",  DEFAULT_OFF_SECOND);
   sensorCntrValue      = prefs.getUInt ("cntr",  DEFAULT_CNTR_VALUE);
   maxPulsesPerInterval = prefs.getUInt ("maxPI", DEFAULT_MAX_PULSES_PER_INTERVAL);
+  counterLimitReached  = prefs.getBool ("cLR",   false);
   prefs.end();
-  log(DEBUG, "main: schedule loaded on=%02d:%02d:%02d off=%02d:%02d:%02d cntr=%u maxPI=%u",
+  log(DEBUG, "main: schedule loaded on=%02d:%02d:%02d off=%02d:%02d:%02d cntr=%u maxPI=%u cLR=%d",
       onTimeHour, onTimeMinute, onTimeSecond,
-      offTimeHour, offTimeMinute, offTimeSecond, sensorCntrValue, maxPulsesPerInterval);
+      offTimeHour, offTimeMinute, offTimeSecond, sensorCntrValue, maxPulsesPerInterval,
+      counterLimitReached);
 }
 
 void save_schedule() {
@@ -93,6 +95,13 @@ void save_schedule() {
   prefs.putUInt ("maxPI", maxPulsesPerInterval);
   prefs.end();
   log(DEBUG, "main: schedule saved");
+}
+
+void clear_counter_limit() {
+  counterLimitReached = false;
+  prefs.begin("watering", false);
+  prefs.putBool("cLR", false);
+  prefs.end();
 }
 
 DateTime now;
@@ -242,6 +251,9 @@ void loop() {
             flowsensor_disable();
             log(DEBUG, "main: volume limit reached (%u cL) — locked off for this window",
                 PULSES_TO_CL(sensorTotalCntr));
+            prefs.begin("watering", false);
+            prefs.putBool("cLR", true);
+            prefs.end();
           }
           digitalWrite(valve, LOW);
           valve_on = false;
@@ -257,6 +269,11 @@ void loop() {
         sensorTotalCntr      = 0;
         timeinterval         = 0;
         flowAlarm            = false;
+        if (counterLimitReached) {
+          prefs.begin("watering", false);
+          prefs.putBool("cLR", false);
+          prefs.end();
+        }
         counterLimitReached  = false;
       }
     }

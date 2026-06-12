@@ -2,4 +2,5 @@
 #define _MAIN_H_
 extern char rec_buffer[10];
 extern int rec_buffer_len;
+void clear_counter_limit();  // clears counterLimitReached flag + NVS
 #endif
